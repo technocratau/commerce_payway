@@ -28,3 +28,7 @@ This module requires the following:
   - Commerce core,
   - Commerce Payment (and its dependencies);
 * API Key (https://www.payway.com.au/core/DeveloperTestFacilityView)
+
+TROUBLESHOOTING
+---------------
+* To test with different credit card, please go to https://www.payway.com.au/docs/rest.html#test-card-numbers
