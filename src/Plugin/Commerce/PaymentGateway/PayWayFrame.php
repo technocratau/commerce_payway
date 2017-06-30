@@ -147,10 +147,11 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       throw new \InvalidArgumentException('The provided payment has no payment method referenced.');
     }
 
+    /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
+    $order = $payment->getOrder();
+
     // Delete and unset payment and related expired relationships.
     if ($payment_method->isExpired()) {
-      /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
-      $order = $payment->getOrder();
       try {
         $payment_method->delete();
         $payment->delete();
