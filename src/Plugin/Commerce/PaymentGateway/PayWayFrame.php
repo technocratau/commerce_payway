@@ -206,9 +206,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'orderNumber' => $order->id(),
           'merchantId' => 'TEST', //$this->configuration['merchantId'],
           'Idempotency-Key' => $uuid,
-          //'frequency' => 'once',
-          //'apiKeyPublic' => $this->configuration['publishable_key_test'],
-          //'apiKeySecret' => $this->configuration['secret_key_test'],
         ],
         'headers' => [
           'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
