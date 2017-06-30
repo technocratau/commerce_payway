@@ -199,25 +199,19 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
         ],
       ]);
 
+      $body = json_decode($response->getBody());
     } catch (\Exception $e) {
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
       throw new HardDeclineException('The provided payment method has been refused');
     }
 
-    /* Response = 210 means that the resource has been created, but we have no
-     * idea of teh status of the payment here.
-     */
-    if ($response->getStatusCode() !== 200
-      && $response->getStatusCode() !== 201) {
-      $errorMessage = $response->getReasonPhrase();
+    // Is the payment approved.
+    if ($body->status !== 'approved'
+      && $body->status !== 'approved*' ) {
+      $errorMessage = $body->responseCode . ': '. $body->responseText;
       \Drupal::logger('commerce_payway_net')->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
-
-
-
-
-
 
     // Update the local payment entity.
     $request_time = \Drupal::time()->getRequestTime();
