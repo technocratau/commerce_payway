@@ -69,6 +69,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       'publishable_key_test' => '',
       'secret_key' => '',
       'publishable_key' => '',
+      'merchant_id' => '',
     ] + parent::defaultConfiguration();
   }
 
@@ -77,6 +78,14 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildConfigurationForm($form, $form_state);
+
+    $form['merchant_id'] = array(
+      '#type' => 'textfield',
+      '#title' => t('Merchant Id'),
+      '#description' => t('eg. TEST'),
+      '#default_value' => $this->configuration['merchant_id'],
+      '#required' => TRUE,
+    );
 
     $form['secret_key_test'] = [
       '#type' => 'textfield',
@@ -125,6 +134,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
+      $this->configuration['merchant_id'] = $values['merchant_id'];
       $this->configuration['secret_key_test'] = $values['secret_key_test'];
       $this->configuration['publishable_key_test'] = $values['publishable_key_test'];
       $this->configuration['secret_key'] = $values['secret_key'];
@@ -175,7 +185,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     } else {
       $customerNumber = 'anonymous';
     }
-    
+
     try {
       // @todo: this has tom some from the plugin paymentGateway.
       $uuid_service = \Drupal::service('uuid');
@@ -191,7 +201,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'principalAmount' => round($payment->getAmount()->getNumber(), 2),
           'currency' => PayWayFrame::CURRENCY,
           'orderNumber' => $order->id(),
-          'merchantId' => 'TEST', //$this->configuration['merchantId'],
+          'merchantId' => $this->configuration['merchantId'],
         ],
         'headers' => [
           'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
