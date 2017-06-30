@@ -12,11 +12,13 @@ use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
+use Drupal\Console\Bootstrap\Drupal;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\commerce_payway_frame\Plugin\Commerce\PaymentMethodType\PayWay;
 use Omnipay\Omnipay;
 use Drupal\Core\Entity\EntityStorageException;
+use GuzzleHttp\Client;
 
 /**
  * Provides the PayWay Frame payment gateway.
@@ -180,17 +182,54 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       'principalAmount' => round($payment->getAmount()->getNumber(), 2),
       'currency' => PayWayFrame::CURRENCY,
       'orderNumber' => $order->id(),
-      'merchantId' => $this->configuration['merchantId'],
+      'merchantId' => 'TEST', //$this->configuration['merchantId'],
       'frequency' => 'once',
     ];
 
+
     try {
-      $request = $this->gateway->purchase($parameters);
-      $result = $request->send();
-      ErrorHelper::handleErrors($result);
+      //$request = $this->gateway->purchase($parameters);
+      //$result = $request->send();
+
+      // @todo: this has tom some from the plugin paymentGateway.
+      $client = new Client();
+      $response = $client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
+        'form_params' => [
+          'singleUseTokenId' => $payment_method->getRemoteId(),
+          'customerNumber' => $customerNumber,
+          'transactionType' => PayWayFrame::TRANSACTIONTYPE,
+          'principalAmount' => round($payment->getAmount()->getNumber(), 2),
+          'currency' => PayWayFrame::CURRENCY,
+          'orderNumber' => $order->id(),
+          'merchantId' => 'TEST', //$this->configuration['merchantId'],
+          //'frequency' => 'once',
+          //'apiKeyPublic' => $this->configuration['publishable_key_test'],
+          //'apiKeySecret' => $this->configuration['secret_key_test'],
+        ],
+        'headers' => [
+          'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
+        ],
+      ]);
+
     } catch (\Exception $e) {
-      ErrorHelper::handleErrors($result);
+      \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
+      throw new HardDeclineException('The provided payment method has been refused');
     }
+
+    /* Response = 210 means that the resource has been created, but we have no
+     * idea of teh status of the payment here.
+     */
+    if ($response->getStatusCode() !== 200
+      && $response->getStatusCode() !== 201) {
+      $errorMessage = $response->getReasonPhrase();
+      \Drupal::logger('commerce_payway_net')->error($errorMessage);
+      throw new HardDeclineException('The provided payment method has been declined');
+    }
+
+
+
+
+
 
     // Update the local payment entity.
     $request_time = \Drupal::time()->getRequestTime();
