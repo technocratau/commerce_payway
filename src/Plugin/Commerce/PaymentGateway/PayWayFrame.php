@@ -190,6 +190,9 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     try {
       //$request = $this->gateway->purchase($parameters);
       //$result = $request->send();
+      // @todo: this has tom some from the plugin paymentGateway.
+      $uuid_service = \Drupal::service('uuid');
+      $uuid = $uuid_service->generate();
 
       // @todo: this has tom some from the plugin paymentGateway.
       $client = new Client();
@@ -202,6 +205,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'currency' => PayWayFrame::CURRENCY,
           'orderNumber' => $order->id(),
           'merchantId' => 'TEST', //$this->configuration['merchantId'],
+          'Idempotency-Key' => $uuid,
           //'frequency' => 'once',
           //'apiKeyPublic' => $this->configuration['publishable_key_test'],
           //'apiKeySecret' => $this->configuration['secret_key_test'],
