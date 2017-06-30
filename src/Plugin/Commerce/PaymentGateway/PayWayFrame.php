@@ -165,22 +165,24 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
       throw new HardDeclineException('The provided payment method has expired');
     }
-    $amount = $payment->getAmount();
-    $currency_code = $payment->getAmount()->getCurrencyCode();
-    $parameters = [
-      'singleUseTokenId' => $payment_method->getRemoteId(),
-      'frequency' => 'once',
-      'currency' => $currency_code,
-      'principalAmount' => $this->formatNumber($amount->getNumber()),
-      'merchantId' => 'TEST',
-    ];
 
+    // Prepare the one-time payment.
     $owner = $payment_method->getOwner();
     if ($owner && !$owner->isAnonymous()) {
-      $parameters['customerNumber'] = $owner->get('uid')->first()->value;
+      $customerNumber = $owner->get('uid')->first()->value;
     } else {
-      $parameters['customerNumber'] = 'anonymous';
+      $customerNumber = 'anonymous';
     }
+    $parameters = [
+      'singleUseTokenId' => $payment_method->getRemoteId(),
+      'customerNumber' => $customerNumber,
+      'transactionType' => PayWayFrame::TRANSACTIONTYPE,
+      'principalAmount' => round($payment->getAmount()->getNumber(), 2),
+      'currency' => PayWayFrame::CURRENCY,
+      'orderNumber' => $order->id(),
+      'merchantId' => $this->configuration['merchantId'],
+      'frequency' => 'once',
+    ];
 
     try {
       $request = $this->gateway->purchase($parameters);
