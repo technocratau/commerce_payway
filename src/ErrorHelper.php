@@ -19,7 +19,8 @@ class ErrorHelper {
    */
   public static function handleErrors($result) {
     // Success.
-    if ($result->getData('message') === null) {
+    $result->getMessage();
+    if ($result->getMessage() === null) {
       return;
     }
 
