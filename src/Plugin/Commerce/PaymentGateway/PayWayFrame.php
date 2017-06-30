@@ -38,6 +38,8 @@ use Drupal\Core\Entity\EntityStorageException;
 class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterface {
 
   private $gateway;
+  const CURRENCY = 'aud';
+  const TRANSACTIONTYPE = 'payment';
 
   /**
    * {@inheritdoc}
