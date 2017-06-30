@@ -175,21 +175,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     } else {
       $customerNumber = 'anonymous';
     }
-    $parameters = [
-      'singleUseTokenId' => $payment_method->getRemoteId(),
-      'customerNumber' => $customerNumber,
-      'transactionType' => PayWayFrame::TRANSACTIONTYPE,
-      'principalAmount' => round($payment->getAmount()->getNumber(), 2),
-      'currency' => PayWayFrame::CURRENCY,
-      'orderNumber' => $order->id(),
-      'merchantId' => 'TEST', //$this->configuration['merchantId'],
-      'frequency' => 'once',
-    ];
-
-
+    
     try {
-      //$request = $this->gateway->purchase($parameters);
-      //$result = $request->send();
       // @todo: this has tom some from the plugin paymentGateway.
       $uuid_service = \Drupal::service('uuid');
       $uuid = $uuid_service->generate();
