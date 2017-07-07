@@ -50,9 +50,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     $this->client = $client;
     $this->uuid_service = $uuid_service;
 
-    $this->gateway = new \Omnipay\PaywayRest\Gateway();
-    $this->defineApiKeys();
-    $this->defineTestMode();
   }
 
   /**
@@ -79,8 +76,35 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    * {@inheritdoc}
    */
   public function getPublishableKey() {
-    return $this->gateway->getApiKeyPublic();
+    switch ($this->configuration['mode']) {
+      case 'test':
+        $publicKey = $this->configuration['publishable_key_test'];
+        break;
+      case 'live':
+        $publicKey = $this->configuration['publishable_key'];
+        break;
+      default:
+        $publicKey = '';
+        drupal_set_message(t('The public key id empty'), 'error');
+    }
+    return $publicKey;
   }
+
+  public function getSecretKey() {
+    switch ($this->configuration['mode']) {
+      case 'test':
+        $secretKey = $this->configuration['secret_key_test'];
+        break;
+      case 'live':
+        $secretKey = $this->configuration['secret_key'];
+        break;
+      default:
+        $secretKey = '';
+        drupal_set_message(t('The private key is empty'), 'error');
+    }
+    return $secretKey;
+  }
+
 
   /**
    * {@inheritdoc}
@@ -221,7 +245,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'merchantId' => $this->configuration['merchant_id'],
         ],
         'headers' => [
-          'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
+          'Authorization' => 'Basic ' . base64_encode($this->getSecretKey()),
           'Idempotency-Key' => $this->uuid_service->generate(),
         ],
       ]);
@@ -309,57 +333,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
   public function deletePaymentMethod(PaymentMethodInterface $payment_method) {
     // @todo
     $a = 1;
-  }
-
-  /**
-   * Formats the charge amount for stripe.
-   *
-   * @param integer $amount
-   *   The amount being charged.
-   *
-   * @return integer
-   *   The Stripe formatted amount.
-   */
-  protected function formatNumber($amount) {
-    return number_format($amount, 0, '.', '');
-  }
-
-  /**
-   * Define Api Keys to use with PayWay based on the chosen mode.
-   */
-  protected function defineApiKeys() {
-    switch ($this->configuration['mode']) {
-      case 'test':
-        $keySecret = $this->configuration['secret_key_test'];
-        $keyPublic = $this->configuration['publishable_key_test'];
-        break;
-      case 'live':
-        $keySecret = $this->configuration['secret_key'];
-        $keyPublic = $this->configuration['publishable_key'];
-        break;
-      default:
-        $keySecret = '';
-        $keyPublic = '';
-        drupal_set_message(t('The communication keys are empty'), 'error');
-    }
-    $this->gateway->setApiKeySecret($keySecret);
-    $this->gateway->setApiKeyPublic($keyPublic);
-  }
-
-  /**
-   * Define the mode of communication to use with PayWay.
-   */
-  protected function defineTestMode(){
-    switch ($this->configuration['mode']) {
-      case 'test':
-        $this->gateway->setTestMode(TRUE);
-        break;
-      case 'live':
-        $this->gateway->setTestMode(FALSE);
-        break;
-      default:
-        $this->gateway->setTestMode(TRUE);
-    }
   }
 
 }
