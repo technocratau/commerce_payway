@@ -90,6 +90,12 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     return $publicKey;
   }
 
+  /**
+   * Get the secret Key.
+   * 
+   * @return string
+   *   The secret key.
+   */
   public function getSecretKey() {
     switch ($this->configuration['mode']) {
       case 'test':
