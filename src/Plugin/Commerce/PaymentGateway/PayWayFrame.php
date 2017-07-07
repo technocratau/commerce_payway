@@ -36,7 +36,6 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterface {
 
-  private $gateway;
   private $client;
   private $uuidService;
   const CURRENCY = 'aud';
