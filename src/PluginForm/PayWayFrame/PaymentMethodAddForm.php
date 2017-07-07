@@ -132,15 +132,6 @@ HTML
       ];
     }
 
-    $element['payment_cc_submit'] = [
-      '#type' => 'submit',
-      '#value' => 'Submit',
-      '#attributes' => [
-        'id' => 'payway-cc-submit',
-        'disabled' => 'disabled',
-      ]
-    ];
-
     $element['#attached']['library'][] = 'commerce_payway_frame/form';
 
     return $element;
