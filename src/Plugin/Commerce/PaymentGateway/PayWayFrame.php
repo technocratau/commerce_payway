@@ -165,7 +165,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     // Delete and unset payment and related expired relationships.
     if ($payment_method->isExpired()) {
       try {
-        $payment_method->delete();
+        // The next line breaks the payment method.
+        //$payment_method->delete();
         $payment->delete();
         $order->set('payment_method',  null);
         $order->set('payment_gateway',  null);
@@ -187,11 +188,11 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     }
 
     try {
-      // @todo: this has tom some from the plugin paymentGateway.
+      // @todo: this has to come from the plugin paymentGateway.
       $uuid_service = \Drupal::service('uuid');
       $uuid = $uuid_service->generate();
 
-      // @todo: this has tom some from the plugin paymentGateway.
+      // @todo: this has to come from the plugin paymentGateway.
       $client = new Client();
       $response = $client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
         'form_params' => [
@@ -211,27 +212,31 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
       $result = json_decode($response->getBody());
     } catch (\Exception $e) {
+      // @todo: the next line is supposed to expire the card, but it's not working.
+      $payment_method->setExpiresTime(0);
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
       throw new HardDeclineException('The provided payment method has been refused');
     }
 
-    // Is the payment approved.
+    // If the payment is not approved.
     if ($result->status !== 'approved'
       && $result->status !== 'approved*' ) {
       $errorMessage = $result->responseCode . ': '. $result->responseText;
+      // @todo: the next line is supposed to expire the card, but it's not working.
+      $payment_method->setExpiresTime(0);
       \Drupal::logger('commerce_payway_net')->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
 
     // Update the local payment entity.
-    $requestTime = \Drupal::time()->getRequestTime();
+    $request_time = \Drupal::time()->getRequestTime();
     $payment->state = $capture ? 'capture_completed' : 'authorization';
     $payment->setRemoteId($result->transactionId);
-    $payment->setAuthorizedTime($requestTime);
+    $payment->setAuthorizedTime($request_time);
 
     // @todo Find out how long an authorization is valid, set its expiration.
     if ($capture) {
-      $payment->setCapturedTime($requestTime);
+      $payment->setCapturedTime($request_time);
     }
     $payment->save();
   }
