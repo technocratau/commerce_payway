@@ -19,6 +19,7 @@ use Drupal\commerce_payway_frame\Plugin\Commerce\PaymentMethodType\PayWay;
 use Omnipay\Omnipay;
 use Drupal\Core\Entity\EntityStorageException;
 use GuzzleHttp\Client;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * Provides the PayWay Frame payment gateway.
@@ -40,18 +41,39 @@ use GuzzleHttp\Client;
 class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterface {
 
   private $gateway;
+  private $client;
   const CURRENCY = 'aud';
   const TRANSACTIONTYPE = 'payment';
 
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
+
+    $this->client = $client;
+
     $this->gateway = new \Omnipay\PaywayRest\Gateway();
     $this->defineApiKeys();
     $this->defineTestMode();
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity_type.manager'),
+      $container->get('plugin.manager.commerce_payment_type'),
+      $container->get('plugin.manager.commerce_payment_method_type'),
+      $container->get('http_client')
+    );
+
+  }
+
 
   /**
    * {@inheritdoc}
@@ -191,10 +213,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       // @todo: this has to come from the plugin paymentGateway.
       $uuid_service = \Drupal::service('uuid');
       $uuid = $uuid_service->generate();
-
-      // @todo: this has to come from the plugin paymentGateway.
-      $client = new Client();
-      $response = $client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
+      
+      $response = $this->client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
         'form_params' => [
           'singleUseTokenId' => $payment_method->getRemoteId(),
           'customerNumber' => $customerNumber,
