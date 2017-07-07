@@ -201,7 +201,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'principalAmount' => round($payment->getAmount()->getNumber(), 2),
           'currency' => PayWayFrame::CURRENCY,
           'orderNumber' => $order->id(),
-          'merchantId' => $this->configuration['merchantId'],
+          'merchantId' => $this->configuration['merchant_id'],
         ],
         'headers' => [
           'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
@@ -209,29 +209,29 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
         ],
       ]);
 
-      $body = json_decode($response->getBody());
+      $result = json_decode($response->getBody());
     } catch (\Exception $e) {
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
       throw new HardDeclineException('The provided payment method has been refused');
     }
 
     // Is the payment approved.
-    if ($body->status !== 'approved'
-      && $body->status !== 'approved*' ) {
-      $errorMessage = $body->responseCode . ': '. $body->responseText;
+    if ($result->status !== 'approved'
+      && $result->status !== 'approved*' ) {
+      $errorMessage = $result->responseCode . ': '. $result->responseText;
       \Drupal::logger('commerce_payway_net')->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
 
     // Update the local payment entity.
-    $request_time = \Drupal::time()->getRequestTime();
+    $requestTime = \Drupal::time()->getRequestTime();
     $payment->state = $capture ? 'capture_completed' : 'authorization';
-    $payment->setRemoteId($result->getTransactionId());
-    $payment->setAuthorizedTime($request_time);
+    $payment->setRemoteId($result->transactionId);
+    $payment->setAuthorizedTime($requestTime);
 
     // @todo Find out how long an authorization is valid, set its expiration.
     if ($capture) {
-      $payment->setCapturedTime($request_time);
+      $payment->setCapturedTime($requestTime);
     }
     $payment->save();
   }
