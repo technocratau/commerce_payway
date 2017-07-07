@@ -2,26 +2,19 @@
 
 namespace Drupal\commerce_payway_frame\Plugin\Commerce\PaymentGateway;
 
-use Drupal\commerce_payway_frame\ErrorHelper;
-use Drupal\commerce_payment\CreditCard;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
-use Drupal\commerce_payment\Exception\InvalidRequestException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
 use Drupal\Component\Uuid\UuidInterface;
-use Drupal\Console\Bootstrap\Drupal;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\commerce_payway_frame\Plugin\Commerce\PaymentMethodType\PayWay;
-use Omnipay\Omnipay;
 use Drupal\Core\Entity\EntityStorageException;
 use GuzzleHttp\Client;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Component\Uuid;
 
 /**
  * Provides the PayWay Frame payment gateway.
