@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_payway_frame\Plugin\Commerce\PaymentGateway;
 
+use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;
 use Drupal\commerce_payment\Exception\HardDeclineException;
@@ -71,7 +72,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   }
 
-
   /**
    * {@inheritdoc}
    */
@@ -92,7 +92,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   /**
    * Get the secret Key.
-   * 
+   *
    * @return string
    *   The secret key.
    */
@@ -217,12 +217,13 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     // Delete and unset payment and related expired relationships.
     if ($payment_method->isExpired()) {
       try {
+        $this->deletePayment($payment , $order);
         // The next line breaks the payment method.
         //$payment_method->delete();
-        $payment->delete();
-        $order->set('payment_method',  null);
-        $order->set('payment_gateway',  null);
-        $order->save();
+        //$payment->delete();
+        //$order->set('payment_method',  null);
+        //$order->set('payment_gateway',  null);
+        //$order->save();
       }
       catch (EntityStorageException $e) {
         // Mute exceptions.
@@ -258,8 +259,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
       $result = json_decode($response->getBody());
     } catch (\Exception $e) {
-      // @todo: the next line is supposed to expire the card, but it's not working.
-      $payment_method->setExpiresTime(0);
+      $this->deletePayment($payment , $order);
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
       throw new HardDeclineException('The provided payment method has been refused');
     }
@@ -267,9 +267,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     // If the payment is not approved.
     if ($result->status !== 'approved'
       && $result->status !== 'approved*' ) {
+      $this->deletePayment($payment , $order);
       $errorMessage = $result->responseCode . ': '. $result->responseText;
-      // @todo: the next line is supposed to expire the card, but it's not working.
-      $payment_method->setExpiresTime(0);
       \Drupal::logger('commerce_payway_net')->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
@@ -341,4 +340,19 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     $a = 1;
   }
 
+  /**
+   * Delete the payment instance to avoid having a non working card displayed
+   * in /order_information.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   * @param \Drupal\commerce_order\Entity\OrderInterface $order
+   *
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+  public function deletePayment(PaymentInterface$payment , OrderInterface $order) {
+    $payment->delete();
+    $order->set('payment_method',  null);
+    $order->set('payment_gateway',  null);
+    $order->save();
+  }
 }
