@@ -39,7 +39,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
   private $client;
   private $uuidService;
   const CURRENCY = 'aud';
-  const TRANSACTIONTYPE = 'payment';
+  const TRANSACTION_TYPE = 'payment';
 
   /**
    * {@inheritdoc}
@@ -254,7 +254,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           'form_params' => [
             'singleUseTokenId' => $payment_method->getRemoteId(),
             'customerNumber' => $customerNumber,
-            'transactionType' => PayWayFrame::TRANSACTIONTYPE,
+            'transactionType' => PayWayFrame::TRANSACTION_TYPE,
             'principalAmount' => round($payment->getAmount()->getNumber(), 2),
             'currency' => PayWayFrame::CURRENCY,
             'orderNumber' => $order->id(),
