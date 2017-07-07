@@ -12,6 +12,7 @@ use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
 use Drupal\commerce_price\Price;
+use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Console\Bootstrap\Drupal;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
@@ -20,6 +21,7 @@ use Omnipay\Omnipay;
 use Drupal\Core\Entity\EntityStorageException;
 use GuzzleHttp\Client;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Drupal\Component\Uuid;
 
 /**
  * Provides the PayWay Frame payment gateway.
@@ -42,16 +44,18 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   private $gateway;
   private $client;
+  private $uuid_service;
   const CURRENCY = 'aud';
   const TRANSACTIONTYPE = 'payment';
 
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client, UuidInterface $uuid_service) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
 
     $this->client = $client;
+    $this->uuid_service = $uuid_service;
 
     $this->gateway = new \Omnipay\PaywayRest\Gateway();
     $this->defineApiKeys();
@@ -60,6 +64,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   /**
    * {@inheritdoc}
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
+   * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
@@ -69,7 +75,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       $container->get('entity_type.manager'),
       $container->get('plugin.manager.commerce_payment_type'),
       $container->get('plugin.manager.commerce_payment_method_type'),
-      $container->get('http_client')
+      $container->get('http_client'),
+      $container->get('uuid')
     );
 
   }
@@ -210,10 +217,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     }
 
     try {
-      // @todo: this has to come from the plugin paymentGateway.
-      $uuid_service = \Drupal::service('uuid');
-      $uuid = $uuid_service->generate();
-      
       $response = $this->client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
         'form_params' => [
           'singleUseTokenId' => $payment_method->getRemoteId(),
@@ -226,7 +229,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
         ],
         'headers' => [
           'Authorization' => 'Basic ' . base64_encode($this->configuration['secret_key_test']),
-          'Idempotency-Key' => $uuid,
+          'Idempotency-Key' => $this->uuid_service->generate(),
         ],
       ]);
 
