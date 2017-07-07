@@ -202,6 +202,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    *
    * @throws HardDeclineException
    * @throws \Exception
+   * @throws \Drupal\Core\Entity\EntityStorageException
    */
   public function createPayment(PaymentInterface $payment, $capture = TRUE) {
     if ($payment->getState()->value !== 'new') {
@@ -223,19 +224,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
     // Delete and unset payment and related expired relationships.
     if ($payment_method->isExpired()) {
-      try {
-        $this->deletePayment($payment, $order);
-        // The next line breaks the payment method.
-        // $payment_method->delete();
-        // $payment->delete();
-        // $order->set('payment_method',  null);
-        // $order->set('payment_gateway',  null);
-        // $order->save();
-      }
-      catch (EntityStorageException $e) {
-        // Mute exceptions.
-      }
-
+      $this->deletePayment($payment, $order);
       throw new HardDeclineException('The provided payment method has expired');
     }
 
