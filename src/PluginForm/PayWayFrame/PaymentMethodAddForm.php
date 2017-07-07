@@ -8,6 +8,9 @@ use Drupal\commerce_payment\Exception\PaymentGatewayException;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\profile\Entity\Profile;
 
+/**
+ * Payment Method Add form.
+ */
 class PaymentMethodAddForm extends PaymentGatewayFormBase {
 
   /**
@@ -28,7 +31,9 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * {@inheritdoc}
    */
   public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    /**
+ * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+*/
     $payment_method = $this->entity;
 
     $plugin = $this->plugin;
@@ -49,18 +54,26 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
 
     $form['payment_details'] = $this->buildPayWayForm($form['payment_details'], $form_state);
 
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    /**
+ * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+*/
     $payment_method = $this->entity;
-    /** @var \Drupal\profile\Entity\ProfileInterface $billing_profile */
-    $billing_profile = Profile::create([
-      'type' => 'customer',
-      'uid' => $payment_method->getOwnerId(),
-    ]);
+    /**
+ * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
+*/
+    $billing_profile = Profile::create(
+        [
+          'type' => 'customer',
+          'uid' => $payment_method->getOwnerId(),
+        ]
+    );
     if ($order = $this->routeMatch->getParameter('commerce_order')) {
       $store = $order->getStore();
     }
     else {
-      /** @var \Drupal\commerce_store\StoreStorageInterface $store_storage */
+      /**
+ * @var \Drupal\commerce_store\StoreStorageInterface $store_storage
+*/
       $store_storage = \Drupal::entityTypeManager()->getStorage('commerce_store');
       $store = $store_storage->loadDefault();
     }
@@ -80,21 +93,23 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * {@inheritdoc}
    */
   public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->validatePayWayForm($form['payment_details'], $form_state);
+    // The JS library performs its own validation.
   }
 
   /**
    * {@inheritdoc}
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $this->submitPayWayForm($form['payment_details'], $form_state);
-
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    $values = $form_state->getValue($form['payment_details']['#parents']);
+    $this->entity->payway_token = $values['payment_credit_card_token'];
+    // @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
     $payment_method = $this->entity;
     $payment_method->setBillingProfile($form['billing_information']['#profile']);
 
     $values = $form_state->getValue($form['#parents']);
-    /** @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
+    /**
+ * @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin
+*/
     $payment_gateway_plugin = $this->plugin;
     // The payment method form is customer facing. For security reasons
     // the returned errors need to be more generic.
@@ -103,16 +118,26 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     }
     catch (DeclineException $e) {
       \Drupal::logger('commerce_payment')->warning($e->getMessage());
-      throw new DeclineException('We encountered an error processing your payment method. Please verify your details and try again.');
+      throw new DeclineException('We encountered an error processing your 
+              payment method. Please verify your details and try again.');
     }
     catch (PaymentGatewayException $e) {
       \Drupal::logger('commerce_payment')->error($e->getMessage());
-      throw new PaymentGatewayException('We encountered an unexpected error processing your payment method. Please try again later.');
+      throw new PaymentGatewayException('We encountered an unexpected 
+              error processing your payment method. Please try again later.');
     }
   }
 
   /**
-   * {@inheritdoc}
+   * Build Pay Way form.
+   *
+   * @param array $element
+   *   Form element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   Form state.
+   *
+   * @return array
+   *   Form element.
    */
   public function buildPayWayForm(array $element, FormStateInterface $form_state) {
 
@@ -135,22 +160,6 @@ HTML
     $element['#attached']['library'][] = 'commerce_payway_frame/form';
 
     return $element;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function validatePayWayForm(array &$element, FormStateInterface $form_state) {
-    // The JS library performs its own validation.
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function submitPayWayForm(array $element, FormStateInterface $form_state) {
-    // The payment gateway plugin will process the submitted payment details.
-    $values = $form_state->getValue($element['#parents']);
-    $this->entity->payway_token = $values['payment_credit_card_token'];
   }
 
 }

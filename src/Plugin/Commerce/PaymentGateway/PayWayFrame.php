@@ -38,7 +38,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   private $gateway;
   private $client;
-  private $uuid_service;
+  private $uuidService;
   const CURRENCY = 'aud';
   const TRANSACTIONTYPE = 'payment';
 
@@ -49,25 +49,26 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
 
     $this->client = $client;
-    $this->uuid_service = $uuid_service;
+    $this->uuidService = $uuid_service;
 
   }
 
   /**
    * {@inheritdoc}
+   *
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
-      $configuration,
-      $plugin_id,
-      $plugin_definition,
-      $container->get('entity_type.manager'),
-      $container->get('plugin.manager.commerce_payment_type'),
-      $container->get('plugin.manager.commerce_payment_method_type'),
-      $container->get('http_client'),
-      $container->get('uuid')
+    $configuration,
+    $plugin_id,
+    $plugin_definition,
+    $container->get('entity_type.manager'),
+    $container->get('plugin.manager.commerce_payment_type'),
+    $container->get('plugin.manager.commerce_payment_method_type'),
+    $container->get('http_client'),
+    $container->get('uuid')
     );
 
   }
@@ -80,9 +81,11 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       case 'test':
         $publicKey = $this->configuration['publishable_key_test'];
         break;
+
       case 'live':
         $publicKey = $this->configuration['publishable_key'];
         break;
+
       default:
         $publicKey = '';
         drupal_set_message(t('The public key id empty'), 'error');
@@ -101,16 +104,17 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       case 'test':
         $secretKey = $this->configuration['secret_key_test'];
         break;
+
       case 'live':
         $secretKey = $this->configuration['secret_key'];
         break;
+
       default:
         $secretKey = '';
         drupal_set_message(t('The private key is empty'), 'error');
     }
     return $secretKey;
   }
-
 
   /**
    * {@inheritdoc}
@@ -157,14 +161,14 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       '#type' => 'textfield',
       '#title' => $this->t('Live Secret Key'),
       '#default_value' => $this->configuration['secret_key'],
-      // '#required' => TRUE,
+        // '#required' => TRUE,.
     ];
 
     $form['publishable_key'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Live Publishable Key'),
       '#default_value' => $this->configuration['publishable_key'],
-      // '#required' => TRUE,
+        // '#required' => TRUE,.
     ];
 
     return $form;
@@ -205,25 +209,29 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       throw new \InvalidArgumentException('The provided payment is in an invalid state.');
     }
 
-    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
+    /**
+ * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+*/
     $payment_method = $payment->getPaymentMethod();
-    if ($payment_method === null) {
+    if ($payment_method === NULL) {
       throw new \InvalidArgumentException('The provided payment has no payment method referenced.');
     }
 
-    /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
+    /**
+ * @var \Drupal\commerce_order\Entity\OrderInterface $order
+*/
     $order = $payment->getOrder();
 
     // Delete and unset payment and related expired relationships.
     if ($payment_method->isExpired()) {
       try {
-        $this->deletePayment($payment , $order);
+        $this->deletePayment($payment, $order);
         // The next line breaks the payment method.
-        //$payment_method->delete();
-        //$payment->delete();
-        //$order->set('payment_method',  null);
-        //$order->set('payment_gateway',  null);
-        //$order->save();
+        // $payment_method->delete();
+        // $payment->delete();
+        // $order->set('payment_method',  null);
+        // $order->set('payment_gateway',  null);
+        // $order->save();
       }
       catch (EntityStorageException $e) {
         // Mute exceptions.
@@ -236,39 +244,44 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     $owner = $payment_method->getOwner();
     if ($owner && !$owner->isAnonymous()) {
       $customerNumber = $owner->get('uid')->first()->value;
-    } else {
+    }
+    else {
       $customerNumber = 'anonymous';
     }
 
     try {
-      $response = $this->client->request('POST', 'https://api.payway.com.au/rest/v1/transactions', [
-        'form_params' => [
-          'singleUseTokenId' => $payment_method->getRemoteId(),
-          'customerNumber' => $customerNumber,
-          'transactionType' => PayWayFrame::TRANSACTIONTYPE,
-          'principalAmount' => round($payment->getAmount()->getNumber(), 2),
-          'currency' => PayWayFrame::CURRENCY,
-          'orderNumber' => $order->id(),
-          'merchantId' => $this->configuration['merchant_id'],
-        ],
-        'headers' => [
-          'Authorization' => 'Basic ' . base64_encode($this->getSecretKey()),
-          'Idempotency-Key' => $this->uuid_service->generate(),
-        ],
-      ]);
+      $response = $this->client->request(
+        'POST', 'https://api.payway.com.au/rest/v1/transactions', [
+          'form_params' => [
+            'singleUseTokenId' => $payment_method->getRemoteId(),
+            'customerNumber' => $customerNumber,
+            'transactionType' => PayWayFrame::TRANSACTIONTYPE,
+            'principalAmount' => round($payment->getAmount()->getNumber(), 2),
+            'currency' => PayWayFrame::CURRENCY,
+            'orderNumber' => $order->id(),
+            'merchantId' => $this->configuration['merchant_id'],
+          ],
+          'headers' => [
+            'Authorization' => 'Basic ' . base64_encode($this->getSecretKey()),
+            'Idempotency-Key' => $this->uuidService->generate(),
+          ],
+        ]
+      );
 
       $result = json_decode($response->getBody());
-    } catch (\Exception $e) {
-      $this->deletePayment($payment , $order);
+    }
+    catch (\Exception $e) {
+      $this->deletePayment($payment, $order);
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
       throw new HardDeclineException('The provided payment method has been refused');
     }
 
     // If the payment is not approved.
     if ($result->status !== 'approved'
-      && $result->status !== 'approved*' ) {
-      $this->deletePayment($payment , $order);
-      $errorMessage = $result->responseCode . ': '. $result->responseText;
+        && $result->status !== 'approved*'
+    ) {
+      $this->deletePayment($payment, $order);
+      $errorMessage = $result->responseCode . ': ' . $result->responseText;
       \Drupal::logger('commerce_payway_net')->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
@@ -290,24 +303,18 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    * {@inheritdoc}
    */
   public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
-    // @todo
-    $a = 1;
   }
 
   /**
    * {@inheritdoc}
    */
   public function voidPayment(PaymentInterface $payment) {
-    // @todo
-    $a = 1;
   }
 
   /**
    * {@inheritdoc}
    */
   public function refundPayment(PaymentInterface $payment, Price $amount = NULL) {
-    // @todo
-    $a = 1;
   }
 
   /**
@@ -315,20 +322,22 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    */
   public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
     $required_keys = [
-      // The expected keys are payment gateway specific and usually match
-      // the PaymentMethodAddForm form elements. They are expected to be valid.
-      'payment_credit_card_token'
+        // The expected keys are payment gateway specific and usually match
+        // a PaymentMethodAddForm form elements. They are expected to be valid.
+      'payment_credit_card_token',
     ];
     foreach ($required_keys as $required_key) {
       if (empty($payment_details[$required_key])) {
-        throw new \InvalidArgumentException(sprintf('$payment_details must contain the %s key.', $required_key));
+        throw new \InvalidArgumentException(sprintf('$payment_details 
+          must contain the %s key.', $required_key));
       }
     }
 
-    $payment_method->setExpiresTime(REQUEST_TIME + (10 * 60)); // 10 minutes.
-    $payment_method->setReusable(false);
+    // 10 minutes.
+    $payment_method->setExpiresTime(REQUEST_TIME + (10 * 60));
+    $payment_method->setReusable(FALSE);
     $payment_method->setRemoteId($payment_details['payment_credit_card_token']);
-    $payment_method->setDefault(false);
+    $payment_method->setDefault(FALSE);
     $payment_method->save();
   }
 
@@ -336,23 +345,23 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    * {@inheritdoc}
    */
   public function deletePaymentMethod(PaymentMethodInterface $payment_method) {
-    // @todo
-    $a = 1;
   }
 
   /**
-   * Delete the payment instance to avoid having a non working card displayed
-   * in /order_information.
+   * Delete the payment instance to fix the list of payment methods.
    *
    * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   *   The current instance of payment.
    * @param \Drupal\commerce_order\Entity\OrderInterface $order
+   *   The current order.
    *
    * @throws \Drupal\Core\Entity\EntityStorageException
    */
-  public function deletePayment(PaymentInterface$payment , OrderInterface $order) {
+  public function deletePayment(PaymentInterface $payment, OrderInterface $order) {
     $payment->delete();
-    $order->set('payment_method',  null);
-    $order->set('payment_gateway',  null);
+    $order->set('payment_method', NULL);
+    $order->set('payment_gateway', NULL);
     $order->save();
   }
+
 }

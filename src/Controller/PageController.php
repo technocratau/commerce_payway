@@ -3,13 +3,11 @@
 namespace Drupal\commerce_payway_frame\Controller;
 
 use Drupal\commerce_payment\PaymentGatewayManager;
-use Drupal\commerce_payway_frame\Plugin\Commerce\PaymentGateway\PayWayFrameInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Routing\TrustedRedirectResponse;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use \Drupal\Core\File\FileSystem;
-use \Drupal\Component\Plugin\Exception\PluginException;
 
 /**
  * This is a controller for PayWay Frame pages.
@@ -44,10 +42,10 @@ class PageController implements ContainerInjectionInterface {
    *   The request stack.
    */
   public function __construct(
-    RequestStack $request_stack,
-    FileSystem $fileSystem,
-    PaymentGatewayManager $paymentGatewayManager
-  ) {
+        RequestStack $request_stack,
+        FileSystem $fileSystem,
+        PaymentGatewayManager $paymentGatewayManager
+    ) {
     $this->currentRequest = $request_stack->getCurrentRequest();
     $this->fileSystem = $fileSystem;
     $this->paymentPluginManager = $paymentGatewayManager;
@@ -55,15 +53,18 @@ class PageController implements ContainerInjectionInterface {
 
   /**
    * {@inheritdoc}
+   *
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
   public static function create(ContainerInterface $container) {
-    /** @noinspection PhpParamsInspection */
+    /**
+ * @noinspection PhpParamsInspection
+*/
     return new static(
-      $container->get('request_stack'),
-      $container->get('file_system'),
-      $container->get('plugin.manager.commerce_payment_gateway')
+    $container->get('request_stack'),
+    $container->get('file_system'),
+    $container->get('plugin.manager.commerce_payment_gateway')
     );
   }
 
@@ -72,8 +73,8 @@ class PageController implements ContainerInjectionInterface {
    *
    * 1. Read the single use token from the parameter
    * 2. Verify your customer using a session cookie
-   * 3. Using your secret API key and the single use token, send a request to take a one-time payment.
-   *
+   * 3. Using your secret API key and the single use token, send a request
+   * to take a one-time payment.
    */
   public function post() {
     $cancel = $this->currentRequest->request->get('cancel');
@@ -95,14 +96,6 @@ class PageController implements ContainerInjectionInterface {
    */
   public function frameHtml($pluginId) {
     $publishableKey = '';
-    try {
-      /** @var PayWayFrameInterface $paymentPluginInstance */
-//      $paymentPluginInstance = $this->paymentPluginManager->createInstance($pluginId);
-//      $publishableKey = $paymentPluginInstance->getPublishableKey();
-    } catch (PluginException $exception) {
-      return 'Error!';
-    }
-
     $modulePath = drupal_get_path('module', 'commerce_payway_frame');
     $moduleRealPath = $this->fileSystem->realpath($modulePath);
     $htmlString = file_get_contents($moduleRealPath . '/templates/HostedCreditCardIFrame.html');
