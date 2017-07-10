@@ -98,9 +98,11 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
 
   /**
    * {@inheritdoc}
+   * @throws \Drupal\commerce_payment\Exception\DeclineException
+   * @throws \Drupal\commerce_payment\Exception\PaymentGatewayException
    */
   public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $values = $form_state->getValue($form['payment_details']['#parents']);
+    $values = (array)$form_state->getValue($form['payment_details']['#parents']);
     $this->entity->payway_token = $values['payment_credit_card_token'];
     // @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
     $payment_method = $this->entity;
