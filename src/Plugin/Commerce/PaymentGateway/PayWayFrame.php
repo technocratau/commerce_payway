@@ -9,13 +9,11 @@ use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
-use Drupal\commerce_payway_frame\Client\PayWayRestApiClient;
 use Drupal\commerce_payway_frame\Client\PayWayRestApiClientInterface;
 use Drupal\commerce_price\Price;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Entity\EntityStorageException;
 use GuzzleHttp\Client;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -233,38 +231,9 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       throw new HardDeclineException('The provided payment method has expired');
     }
 
-    // Prepare the one-time payment.
-    /*$owner = $payment_method->getOwner();
-    if ($owner && !$owner->isAnonymous()) {
-      $customerNumber = $owner->get('uid')->first()->value;
-    }
-    else {
-      $customerNumber = 'anonymous';
-    }*/
-
     try {
       $this->payWayRestApiClient->doRequest($payment, $this->configuration);
       $result = json_decode($this->payWayRestApiClient->getResponse());
-
-      /* $response = $this->client->request(
-        'POST', 'https://api.payway.com.au/rest/v1/transactions', [
-          'form_params' => [
-            'singleUseTokenId' => $payment_method->getRemoteId(),
-            'customerNumber' => $customerNumber,
-            'transactionType' => PayWayFrame::TRANSACTION_TYPE,
-            'principalAmount' => round($payment->getAmount()->getNumber(), 2),
-            'currency' => PayWayFrame::CURRENCY,
-            'orderNumber' => $order->id(),
-            'merchantId' => $this->configuration['merchant_id'],
-          ],
-          'headers' => [
-            'Authorization' => 'Basic ' . base64_encode($this->getSecretKey()),
-            'Idempotency-Key' => $this->uuidService->generate(),
-          ],
-        ]
-      );
-      $result = json_decode($response->getBody());
-      */
     }
     catch (\Exception $e) {
       $this->deletePayment($payment, $order);
