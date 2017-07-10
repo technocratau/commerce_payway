@@ -34,7 +34,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   js_library = "commerce_payway_frame/form",
  * )
  */
-class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterface {
+class PayWayFrame extends OnsitePaymentGatewayBase {
 
   private $client;
   private $uuidService;
