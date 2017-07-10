@@ -31,4 +31,5 @@ This module requires the following:
 
 TROUBLESHOOTING
 ---------------
-* To test with different credit card, please go to https://www.payway.com.au/docs/rest.html#test-card-numbers
+* To test with different credit card, please go to
+https://www.payway.com.au/docs/rest.html#test-card-numbers

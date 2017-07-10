@@ -1,7 +1,4 @@
 <?php
-/**
- * Class pay way rest client api.
- */
 
 namespace Drupal\commerce_payway_frame\Client;
 
@@ -22,6 +19,14 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
   const CURRENCY = 'aud';
   const TRANSACTION_TYPE = 'payment';
 
+  /**
+   * PayWayRestApiClient constructor.
+   *
+   * @param \GuzzleHttp\Client $client
+   *   Guzzle client.
+   * @param \Drupal\Component\Uuid\UuidInterface $uuid_service
+   *   Uuid service.
+   */
   public function __construct(Client $client, UuidInterface $uuid_service) {
     $this->client = $client;
     $this->uuidService = $uuid_service;
@@ -33,7 +38,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
    *   The payment.
    * @param array $configuration
-   *   The payment method configuration
+   *   The payment method configuration.
    *
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */

@@ -1,13 +1,14 @@
 <?php
 
 /**
- * @file Commerce Pay Way Frame module file.
+ * @file
+ * Commerce Pay Way Frame module file.
  */
 
 /**
  * Implements hook_theme().
  */
-function commerce_payway_frame_theme($existing, $type, $theme, $path){
+function commerce_payway_frame_theme($existing, $type, $theme, $path) {
   return [
     'commerce_payment_method' => [
       'render element' => 'elements',

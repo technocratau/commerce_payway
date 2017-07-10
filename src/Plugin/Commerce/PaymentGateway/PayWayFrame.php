@@ -70,7 +70,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     $container->get('plugin.manager.commerce_payment_method_type'),
     $container->get('http_client'),
     $container->get('uuid'),
-    $container->get('commerce_payway_frame.rest_api.client') //commerce_payway_frame.rest_api.client
+    // commerce_payway_frame.rest_api.client.
+    $container->get('commerce_payway_frame.rest_api.client')
     );
 
   }
@@ -126,7 +127,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
       '#type' => 'textfield',
       '#title' => $this->t('API Url'),
       '#default_value' => $this->configuration['api_url'],
-      '#description' => 'eg. https://api.payway.com.au/rest/v1/transactions',
+      '#description' => t('eg. https://api.payway.com.au/rest/v1/transactions'),
       '#required' => TRUE,
     ];
 
@@ -229,7 +230,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     catch (\Exception $e) {
       $this->deletePayment($payment, $order);
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
-      throw new HardDeclineException('The payment request failed.', 0 , $e);
+      throw new HardDeclineException('The payment request failed.', 0, $e);
     }
 
     // If the payment is not approved.
@@ -288,7 +289,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
           '$payment_details must contain the %s key.', $required_key));
       }
     }
-    
+
     $payment_method->setExpiresTime(0);
     $payment_method->setReusable(FALSE);
     $payment_method->setRemoteId($payment_details['payment_credit_card_token']);
