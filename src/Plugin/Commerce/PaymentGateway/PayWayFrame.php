@@ -221,12 +221,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
 */
     $order = $payment->getOrder();
 
-    // Delete and unset payment and related expired relationships.
-    if ($payment_method->isExpired()) {
-      $this->deletePayment($payment, $order);
-      throw new HardDeclineException('The provided payment method has expired');
-    }
-
+    // Request Payway.
     try {
       $this->payWayRestApiClient->doRequest($payment, $this->configuration);
       $result = json_decode($this->payWayRestApiClient->getResponse());
@@ -234,7 +229,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     catch (\Exception $e) {
       $this->deletePayment($payment, $order);
       \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
-      throw new HardDeclineException('The provided payment method has been refused');
+      throw new HardDeclineException('The payment request failed.', 0 , $e);
     }
 
     // If the payment is not approved.
@@ -293,9 +288,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
           '$payment_details must contain the %s key.', $required_key));
       }
     }
-
-    // 10 minutes.
-    $payment_method->setExpiresTime(REQUEST_TIME + (10 * 60));
+    
+    $payment_method->setExpiresTime(0);
     $payment_method->setReusable(FALSE);
     $payment_method->setRemoteId($payment_details['payment_credit_card_token']);
     $payment_method->setDefault(FALSE);
