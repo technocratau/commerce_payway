@@ -1,0 +1,7 @@
+services:
+  commerce_payway_frame.rest_api.client:
+    class: Drupal\commerce_payway_frame\Client\PayWayRestApiClient
+    arguments:
+      - '@http_client'
+      - '@uuid'
+    shared: false

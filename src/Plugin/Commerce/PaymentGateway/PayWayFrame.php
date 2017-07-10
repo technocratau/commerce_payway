@@ -9,6 +9,8 @@ use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
+use Drupal\commerce_payway_frame\Client\PayWayRestApiClient;
+use Drupal\commerce_payway_frame\Client\PayWayRestApiClientInterface;
 use Drupal\commerce_price\Price;
 use Drupal\Component\Uuid\UuidInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -38,17 +40,19 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
   private $client;
   private $uuidService;
+  private $payWayRestApiClient;
   const CURRENCY = 'aud';
   const TRANSACTION_TYPE = 'payment';
 
   /**
    * {@inheritdoc}
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client, UuidInterface $uuid_service) {
+  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client, UuidInterface $uuid_service, PayWayRestApiClientInterface $payWayRestApiClient) {
     parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
 
     $this->client = $client;
     $this->uuidService = $uuid_service;
+    $this->payWayRestApiClient = $payWayRestApiClient;
 
   }
 
@@ -67,7 +71,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     $container->get('plugin.manager.commerce_payment_type'),
     $container->get('plugin.manager.commerce_payment_method_type'),
     $container->get('http_client'),
-    $container->get('uuid')
+    $container->get('uuid'),
+    $container->get('commerce_payway_frame.rest_api.client') //commerce_payway_frame.rest_api.client
     );
 
   }
@@ -98,7 +103,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
    * @return string
    *   The secret key.
    */
-  public function getSecretKey() {
+  /*public function getSecretKey() {
     switch ($this->configuration['mode']) {
       case 'test':
         $secretKey = $this->configuration['secret_key_test'];
@@ -113,7 +118,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
         drupal_set_message(t('The private key is empty'), 'error');
     }
     return $secretKey;
-  }
+  }*/
 
   /**
    * {@inheritdoc}
@@ -229,16 +234,19 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     }
 
     // Prepare the one-time payment.
-    $owner = $payment_method->getOwner();
+    /*$owner = $payment_method->getOwner();
     if ($owner && !$owner->isAnonymous()) {
       $customerNumber = $owner->get('uid')->first()->value;
     }
     else {
       $customerNumber = 'anonymous';
-    }
+    }*/
 
     try {
-      $response = $this->client->request(
+      $this->payWayRestApiClient->doRequest($payment, $this->configuration);
+      $result = json_decode($this->payWayRestApiClient->getResponse()->getBody());
+
+      /* $response = $this->client->request(
         'POST', 'https://api.payway.com.au/rest/v1/transactions', [
           'form_params' => [
             'singleUseTokenId' => $payment_method->getRemoteId(),
@@ -255,8 +263,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
           ],
         ]
       );
-
       $result = json_decode($response->getBody());
+      */
     }
     catch (\Exception $e) {
       $this->deletePayment($payment, $order);
@@ -316,8 +324,8 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     ];
     foreach ($required_keys as $required_key) {
       if (empty($payment_details[$required_key])) {
-        throw new \InvalidArgumentException(sprintf('$payment_details 
-          must contain the %s key.', $required_key));
+        throw new \InvalidArgumentException(sprintf(
+          '$payment_details must contain the %s key.', $required_key));
       }
     }
 
