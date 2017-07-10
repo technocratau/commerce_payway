@@ -5,6 +5,8 @@ namespace Drupal\commerce_payway_frame\Client;
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\Component\Uuid\UuidInterface;
 use GuzzleHttp\Client;
+use GuzzleHttp\ClientInterface;
+use Psr\Http\Message\ResponseInterface;
 
 /**
  * Pay Way Rest Client Api.
@@ -13,21 +15,22 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
 
   private $client;
   private $uuidService;
+  /* @var ResponseInterface */
   private $response;
 
   const METHOD = 'POST';
   const CURRENCY = 'aud';
-  const TRANSACTION_TYPE = 'payment';
+  const TRANSACTION_TYPE_PAYEMENT = 'payment';
 
   /**
    * PayWayRestApiClient constructor.
    *
-   * @param \GuzzleHttp\Client $client
+   * @param \GuzzleHttp\ClientInterface $client
    *   Guzzle client.
    * @param \Drupal\Component\Uuid\UuidInterface $uuid_service
    *   Uuid service.
    */
-  public function __construct(Client $client, UuidInterface $uuid_service) {
+  public function __construct(ClientInterface $client, UuidInterface $uuid_service) {
     $this->client = $client;
     $this->uuidService = $uuid_service;
   }
@@ -41,6 +44,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    *   The payment method configuration.
    *
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   * @throws \GuzzleHttp\Exception\GuzzleException
    */
   public function doRequest(PaymentInterface $payment, array $configuration) {
     $payment_method = $payment->getPaymentMethod();
@@ -63,7 +67,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
         'form_params' => [
           'singleUseTokenId' => $payment_method->getRemoteId(),
           'customerNumber' => $customerNumber,
-          'transactionType' => PayWayRestApiClient::TRANSACTION_TYPE,
+          'transactionType' => PayWayRestApiClient::TRANSACTION_TYPE_PAYEMENT,
           'principalAmount' => round($payment->getAmount()->getNumber(), 2),
           'currency' => PayWayRestApiClient::CURRENCY,
           'orderNumber' => $order->id(),
@@ -81,11 +85,15 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
   /**
    * Get client response.
    *
-   * @return mixed
+   * @return string
    *    Body of the client response.
    */
   public function getResponse() {
-    return $this->response->getBody();
+
+    if ($this->response !== null) {
+      return $this->response->getBody();
+    }
+    return '';
   }
 
   /**
@@ -110,5 +118,6 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
     }
     return $secretKey;
   }
+
 
 }

@@ -11,6 +11,11 @@ interface PayWayRestApiClientInterface {
 
   /**
    * Execute the request to do a payment with PayWay.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   * @param array $configuration
+   *
+   * @return
    */
   public function doRequest(PaymentInterface $payment, array $configuration);
 
