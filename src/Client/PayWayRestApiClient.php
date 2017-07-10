@@ -16,7 +16,6 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
   private $uuidService;
   private $response;
   //@todo : api_rul has to come from $confgiruation.
-  const API_URL = 'https://api.payway.com.au/rest/v1/transactions';
   const METHOD = 'POST';
   const CURRENCY = 'aud';
   const TRANSACTION_TYPE = 'payment';
@@ -43,7 +42,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
     }
 
     $this->response = $this->client->request(
-      PayWayRestApiClient::METHOD, PayWayRestApiClient::API_URL, [
+      PayWayRestApiClient::METHOD, $configuration['api_url'], [
         'form_params' => [
           'singleUseTokenId' => $payment_method->getRemoteId(),
           'customerNumber' => $customerNumber,

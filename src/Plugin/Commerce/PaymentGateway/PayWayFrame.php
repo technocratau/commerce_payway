@@ -122,28 +122,46 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
       '#required' => TRUE,
     );
 
-    $form['secret_key_test'] = [
+    $form['api_url'] = [
+      '#type' => 'textfield',
+      '#title' => $this->t('API Url'),
+      '#default_value' => $this->configuration['api_url'],
+      '#description' => 'eg. https://api.payway.com.au/rest/v1/transactions',
+      '#required' => TRUE,
+    ];
+
+    $form['test'] = [
+      '#type' => 'fieldset',
+      '#title' => t('Tests keys'),
+    ];
+
+    $form['test']['secret_key_test'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Test Secret Key'),
       '#default_value' => $this->configuration['secret_key_test'],
       '#required' => TRUE,
     ];
 
-    $form['publishable_key_test'] = [
+    $form['test']['publishable_key_test'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Test Publishable Key'),
       '#default_value' => $this->configuration['publishable_key_test'],
       '#required' => TRUE,
     ];
 
-    $form['secret_key'] = [
+    $form['live'] = [
+      '#type' => 'fieldset',
+      '#title' => t('Live keys'),
+    ];
+
+    $form['live']['secret_key'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Live Secret Key'),
       '#default_value' => $this->configuration['secret_key'],
         // '#required' => TRUE,.
     ];
 
-    $form['publishable_key'] = [
+    $form['live']['publishable_key'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Live Publishable Key'),
       '#default_value' => $this->configuration['publishable_key'],
@@ -170,10 +188,10 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
       $this->configuration['merchant_id'] = $values['merchant_id'];
-      $this->configuration['secret_key_test'] = $values['secret_key_test'];
-      $this->configuration['publishable_key_test'] = $values['publishable_key_test'];
-      $this->configuration['secret_key'] = $values['secret_key'];
-      $this->configuration['publishable_key'] = $values['publishable_key'];
+      $this->configuration['secret_key_test'] = $values['test']['secret_key_test'];
+      $this->configuration['publishable_key_test'] = $values['test']['publishable_key_test'];
+      $this->configuration['secret_key'] = $values['live']['secret_key'];
+      $this->configuration['publishable_key'] = $values['live']['publishable_key'];
     }
   }
 
