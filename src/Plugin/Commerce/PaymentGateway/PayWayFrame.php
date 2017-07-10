@@ -188,6 +188,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
     if (!$form_state->getErrors()) {
       $values = $form_state->getValue($form['#parents']);
       $this->configuration['merchant_id'] = $values['merchant_id'];
+      $this->configuration['api_url'] = $values['api_url'];
       $this->configuration['secret_key_test'] = $values['test']['secret_key_test'];
       $this->configuration['publishable_key_test'] = $values['test']['publishable_key_test'];
       $this->configuration['secret_key'] = $values['live']['secret_key'];
