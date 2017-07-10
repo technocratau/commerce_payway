@@ -244,7 +244,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
 
     try {
       $this->payWayRestApiClient->doRequest($payment, $this->configuration);
-      $result = json_decode($this->payWayRestApiClient->getResponse()->getBody());
+      $result = json_decode($this->payWayRestApiClient->getResponse());
 
       /* $response = $this->client->request(
         'POST', 'https://api.payway.com.au/rest/v1/transactions', [

@@ -62,8 +62,13 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
 
   }
 
+  /**
+   * Get client response.
+   *
+   * @return mixed
+   */
   public function getResponse() {
-    return $this->response;
+    return $this->response->getBody();
   }
 
   /**
