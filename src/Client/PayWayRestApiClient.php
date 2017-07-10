@@ -1,21 +1,23 @@
 <?php
+/**
+ * Class pay way rest client api.
+ */
 
 namespace Drupal\commerce_payway_frame\Client;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
 use Drupal\Component\Uuid\UuidInterface;
 use GuzzleHttp\Client;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- *
+ * Pay Way Rest Client Api.
  */
 class PayWayRestApiClient implements PayWayRestApiClientInterface {
 
   private $client;
   private $uuidService;
   private $response;
-  //@todo : api_rul has to come from $confgiruation.
+
   const METHOD = 'POST';
   const CURRENCY = 'aud';
   const TRANSACTION_TYPE = 'payment';
@@ -25,6 +27,16 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
     $this->uuidService = $uuid_service;
   }
 
+  /**
+   * Execute the payment request to payway.
+   *
+   * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   *   The payment.
+   * @param array $configuration
+   *   The payment method configuration
+   *
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   */
   public function doRequest(PaymentInterface $payment, array $configuration) {
     $payment_method = $payment->getPaymentMethod();
     /**
@@ -65,6 +77,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    * Get client response.
    *
    * @return mixed
+   *    Body of the client response.
    */
   public function getResponse() {
     return $this->response->getBody();
