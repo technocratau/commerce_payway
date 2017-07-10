@@ -96,29 +96,6 @@ class PayWayFrame extends OnsitePaymentGatewayBase implements PayWayFrameInterfa
   }
 
   /**
-   * Get the secret Key.
-   *
-   * @return string
-   *   The secret key.
-   */
-  /*public function getSecretKey() {
-    switch ($this->configuration['mode']) {
-      case 'test':
-        $secretKey = $this->configuration['secret_key_test'];
-        break;
-
-      case 'live':
-        $secretKey = $this->configuration['secret_key'];
-        break;
-
-      default:
-        $secretKey = '';
-        drupal_set_message(t('The private key is empty'), 'error');
-    }
-    return $secretKey;
-  }*/
-
-  /**
    * {@inheritdoc}
    */
   public function defaultConfiguration() {
