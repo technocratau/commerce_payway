@@ -70,30 +70,9 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     $container->get('plugin.manager.commerce_payment_method_type'),
     $container->get('http_client'),
     $container->get('uuid'),
-    // commerce_payway_frame.rest_api.client.
     $container->get('commerce_payway_frame.rest_api.client')
     );
 
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getPublishableKey() {
-    switch ($this->configuration['mode']) {
-      case 'test':
-        $publicKey = $this->configuration['publishable_key_test'];
-        break;
-
-      case 'live':
-        $publicKey = $this->configuration['publishable_key'];
-        break;
-
-      default:
-        $publicKey = '';
-        drupal_set_message(t('The public key id empty'), 'error');
-    }
-    return $publicKey;
   }
 
   /**
@@ -159,25 +138,15 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
       '#type' => 'textfield',
       '#title' => $this->t('Live Secret Key'),
       '#default_value' => $this->configuration['secret_key'],
-        // '#required' => TRUE,.
     ];
 
     $form['live']['publishable_key'] = [
       '#type' => 'textfield',
       '#title' => $this->t('Live Publishable Key'),
       '#default_value' => $this->configuration['publishable_key'],
-        // '#required' => TRUE,.
     ];
 
     return $form;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
-    parent::validateConfigurationForm($form, $form_state);
-    // @todo: Publishable keys validation, if possible.
   }
 
   /**
@@ -249,29 +218,10 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     $payment->setRemoteId($result->transactionId);
     $payment->setAuthorizedTime($request_time);
 
-    // @todo Find out how long an authorization is valid, set its expiration.
     if ($capture) {
       $payment->setCapturedTime($request_time);
     }
     $payment->save();
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function capturePayment(PaymentInterface $payment, Price $amount = NULL) {
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function voidPayment(PaymentInterface $payment) {
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function refundPayment(PaymentInterface $payment, Price $amount = NULL) {
   }
 
   /**
