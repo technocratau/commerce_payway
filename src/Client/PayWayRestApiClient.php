@@ -120,7 +120,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    */
   public function getResponse() {
     if ($this->response !== NULL) {
-      return $this->response->getBody();
+      return (string) $this->response->getBody();
     }
     return '';
   }
@@ -128,8 +128,11 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
   /**
    * Get the secret Key.
    *
+   * @param array $configuration
+   *    The plugin configuration.
+   *
    * @return string
-   *   The secret key.
+   *    The secret key.
    *
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
@@ -144,7 +147,7 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
         break;
 
       default:
-        throw new MissingDataException('The private key is empty');
+        throw new MissingDataException('The private key is empty.');
     }
     return $secretKey;
   }

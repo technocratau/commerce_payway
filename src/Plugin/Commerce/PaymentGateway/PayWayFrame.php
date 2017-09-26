@@ -15,6 +15,7 @@ use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Logger\LoggerChannelFactoryInterface;
+use Drupal\Core\TypedData\Exception\MissingDataException;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -133,12 +134,13 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
    */
   public function defaultConfiguration() {
     return [
-      'secret_key_test' => '',
-      'publishable_key_test' => '',
-      'secret_key' => '',
-      'publishable_key' => '',
-      'merchant_id' => '',
-    ] + parent::defaultConfiguration();
+        'merchant_id' => '',
+        'api_url' => '',
+        'secret_key_test' => '',
+        'publishable_key_test' => '',
+        'secret_key' => '',
+        'publishable_key' => '',
+      ] + parent::defaultConfiguration();
   }
 
   /**
@@ -254,8 +256,7 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     try {
       $this->payWayRestApiClient->doRequest($payment, $this->configuration);
       $result = json_decode($this->payWayRestApiClient->getResponse());
-    }
-    catch (PayWayClientException $e) {
+    } catch (PayWayClientException $e) {
       $this->deletePayment($payment, $order);
       $this->logger->warning($e->getMessage());
       throw new HardDeclineException('The payment request failed.', 0, $e);
@@ -273,12 +274,11 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
 
     // Update the local payment entity.
     $request_time = $this->time->getRequestTime();
-    $payment->state = $capture ? 'capture_completed' : 'authorization';
+    $payment->state = $capture ? 'completed' : 'authorization';
     $payment->setRemoteId($result->transactionId);
     $payment->setAuthorizedTime($request_time);
-
     if ($capture) {
-      $payment->setCapturedTime($request_time);
+      $payment->setCompletedTime($request_time);
     }
     $payment->save();
   }
@@ -337,6 +337,54 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     $order->set('payment_method', NULL);
     $order->set('payment_gateway', NULL);
     $order->save();
+  }
+
+  /**
+   * Get the publishable Key.
+   *
+   * @return string
+   *    The publishable key.
+   *
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   */
+  public function getPublishableKey() {
+    switch ($this->configuration['mode']) {
+      case 'test':
+        $output = $this->configuration['publishable_key_test'];
+        break;
+
+      case 'live':
+        $output = $this->configuration['publishable_key'];
+        break;
+
+      default:
+        throw new MissingDataException('The publishable key is empty.');
+    }
+    return $output;
+  }
+
+  /**
+   * Get the secret Key.
+   *
+   * @return string
+   *    The secret key.
+   *
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
+   */
+  public function getSecretKey() {
+    switch ($this->configuration['mode']) {
+      case 'test':
+        $output = $this->configuration['secret_key_test'];
+        break;
+
+      case 'live':
+        $output = $this->configuration['secret_key'];
+        break;
+
+      default:
+        throw new MissingDataException('The private key is empty.');
+    }
+    return $output;
   }
 
 }

@@ -2,9 +2,11 @@
 
 namespace Drupal\commerce_payway\PluginForm\PayWayFrame;
 
+use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface;
 use Drupal\commerce_payment\PluginForm\PaymentGatewayFormBase;
 use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
+use Drupal\commerce_payway\Plugin\Commerce\PaymentGateway\PayWayFrame;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\profile\Entity\Profile;
 
@@ -31,6 +33,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * {@inheritdoc}
    *
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
   public function buildConfigurationForm(
     array $form,
@@ -39,6 +42,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
 
+    /** @var PayWayFrame $plugin */
     $plugin = $this->plugin;
 
     $form['#attached']['library'][] = 'commerce_payment/payment_method_form';
@@ -75,9 +79,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       $store = $order->getStore();
     }
     else {
-      /**
-       * @var \Drupal\commerce_store\StoreStorageInterface $store_storage
-       */
+      /** @var \Drupal\commerce_store\StoreStorageInterface $store_storage */
       $store_storage = \Drupal::entityTypeManager()
         ->getStorage('commerce_store');
       $store = $store_storage->loadDefault();
@@ -117,14 +119,13 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
   ) {
     $values = (array) $form_state->getValue($form['payment_details']['#parents']);
     $this->entity->payway_token = $values['payment_credit_card_token'];
+
     /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
     $payment_method->setBillingProfile($form['billing_information']['#profile']);
 
     $values =& $form_state->getValue($form['#parents']);
-    /**
-     * @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin
-     */
+    /** @var SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
     $payment_gateway_plugin = $this->plugin;
     // The payment method form is customer facing. For security reasons
     // the returned errors need to be more generic.
