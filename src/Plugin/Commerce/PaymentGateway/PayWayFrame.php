@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_payway_frame\Plugin\Commerce\PaymentGateway;
+namespace Drupal\commerce_payway\Plugin\Commerce\PaymentGateway;
 
 use Drupal\commerce_order\Entity\OrderInterface;
 use Drupal\commerce_payment\Entity\PaymentInterface;
@@ -9,12 +9,12 @@ use Drupal\commerce_payment\Exception\HardDeclineException;
 use Drupal\commerce_payment\PaymentMethodTypeManager;
 use Drupal\commerce_payment\PaymentTypeManager;
 use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\OnsitePaymentGatewayBase;
-use Drupal\commerce_payway_frame\Client\PayWayRestApiClientInterface;
-use Drupal\commerce_price\Price;
-use Drupal\Component\Uuid\UuidInterface;
+use Drupal\commerce_payway\Client\PayWayRestApiClientInterface;
+use Drupal\commerce_payway\Exception\PayWayClientException;
+use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Form\FormStateInterface;
-use GuzzleHttp\Client;
+use Drupal\Core\Logger\LoggerChannelFactoryInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -25,33 +25,82 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   label = "PayWay Frame",
  *   display_label = "PayWay Frame",
  *   forms = {
- *     "add-payment-method" = "Drupal\commerce_payway_frame\PluginForm\PayWayFrame\PaymentMethodAddForm",
+ *     "add-payment-method" =
+ *   "Drupal\commerce_payway\PluginForm\PayWayFrame\PaymentMethodAddForm",
  *   },
  *   payment_method_types = {"payway"},
  *   credit_card_types = {
- *     "amex", "dinersclub", "discover", "jcb", "maestro", "mastercard", "visa",
+ *     "amex", "dinersclub", "discover", "jcb", "maestro", "mastercard",
+ *   "visa",
  *   },
- *   js_library = "commerce_payway_frame/form",
+ *   js_library = "commerce_payway/frame_form",
  * )
  */
 class PayWayFrame extends OnsitePaymentGatewayBase {
 
-  private $client;
-  private $uuidService;
+  /**
+   * The PayWay REST API Client.
+   *
+   * @var \Drupal\commerce_payway\Client\PayWayRestApiClientInterface
+   */
   private $payWayRestApiClient;
+
+  /**
+   * The logger instance.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  private $logger;
+
+  /**
+   * The default currency.
+   */
   const CURRENCY = 'aud';
+
+  /**
+   * The default transaction type.
+   */
   const TRANSACTION_TYPE = 'payment';
 
   /**
-   * {@inheritdoc}
+   * Constructs a new PayWayFrame object.
+   *
+   * @param array $configuration
+   *   A configuration array containing information about the plugin instance.
+   * @param string $plugin_id
+   *   The plugin_id for the plugin instance.
+   * @param mixed $plugin_definition
+   *   The plugin implementation definition.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
+   * @param \Drupal\commerce_payment\PaymentTypeManager $payment_type_manager
+   *   The payment type manager.
+   * @param \Drupal\commerce_payment\PaymentMethodTypeManager $payment_method_type_manager
+   *   The payment method type manager.
+   * @param \Drupal\Component\Datetime\TimeInterface $time
+   *   The time.
+   * @param \Drupal\commerce_payway\Client\PayWayRestApiClientInterface $payWayRestApiClient
+   *   The PayWay REST API Client.
+   * @param \Drupal\Core\Logger\LoggerChannelFactoryInterface $logger_factory
+   *   A logger factory.
    */
-  public function __construct(array $configuration, $plugin_id, $plugin_definition, EntityTypeManagerInterface $entity_type_manager, PaymentTypeManager $payment_type_manager, PaymentMethodTypeManager $payment_method_type_manager, Client $client, UuidInterface $uuid_service, PayWayRestApiClientInterface $payWayRestApiClient) {
-    parent::__construct($configuration, $plugin_id, $plugin_definition, $entity_type_manager, $payment_type_manager, $payment_method_type_manager);
+  public function __construct(
+    array $configuration,
+    $plugin_id,
+    $plugin_definition,
+    EntityTypeManagerInterface $entity_type_manager,
+    PaymentTypeManager $payment_type_manager,
+    PaymentMethodTypeManager $payment_method_type_manager,
+    TimeInterface $time,
+    PayWayRestApiClientInterface $payWayRestApiClient,
+    LoggerChannelFactoryInterface $logger_factory
+  ) {
+    parent::__construct($configuration, $plugin_id, $plugin_definition,
+      $entity_type_manager, $payment_type_manager,
+      $payment_method_type_manager, $time);
 
-    $this->client = $client;
-    $this->uuidService = $uuid_service;
     $this->payWayRestApiClient = $payWayRestApiClient;
-
+    $this->logger = $logger_factory->get('commerce_payway');
   }
 
   /**
@@ -60,19 +109,23 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceCircularReferenceException
    * @throws \Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException
    */
-  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
-    return new static(
-    $configuration,
+  public static function create(
+    ContainerInterface $container,
+    array $configuration,
     $plugin_id,
-    $plugin_definition,
-    $container->get('entity_type.manager'),
-    $container->get('plugin.manager.commerce_payment_type'),
-    $container->get('plugin.manager.commerce_payment_method_type'),
-    $container->get('http_client'),
-    $container->get('uuid'),
-    $container->get('commerce_payway_frame.rest_api.client')
+    $plugin_definition
+  ) {
+    return new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition,
+      $container->get('entity_type.manager'),
+      $container->get('plugin.manager.commerce_payment_type'),
+      $container->get('plugin.manager.commerce_payment_method_type'),
+      $container->get('datetime.time'),
+      $container->get('commerce_payway.rest_api.client'),
+      $container->get('logger.factory')
     );
-
   }
 
   /**
@@ -91,16 +144,19 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
   /**
    * {@inheritdoc}
    */
-  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
+  public function buildConfigurationForm(
+    array $form,
+    FormStateInterface $form_state
+  ) {
     $form = parent::buildConfigurationForm($form, $form_state);
 
-    $form['merchant_id'] = array(
+    $form['merchant_id'] = [
       '#type' => 'textfield',
       '#title' => t('Merchant Id'),
       '#description' => t('eg. TEST'),
       '#default_value' => $this->configuration['merchant_id'],
       '#required' => TRUE,
-    );
+    ];
 
     $form['api_url'] = [
       '#type' => 'textfield',
@@ -152,11 +208,14 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
   /**
    * {@inheritdoc}
    */
-  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
+  public function submitConfigurationForm(
+    array &$form,
+    FormStateInterface $form_state
+  ) {
     parent::submitConfigurationForm($form, $form_state);
 
     if (!$form_state->getErrors()) {
-      $values = $form_state->getValue($form['#parents']);
+      $values =& $form_state->getValue($form['#parents']);
       $this->configuration['merchant_id'] = $values['merchant_id'];
       $this->configuration['api_url'] = $values['api_url'];
       $this->configuration['secret_key_test'] = $values['test']['secret_key_test'];
@@ -179,41 +238,41 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
     }
 
     /**
- * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
-*/
+     * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+     */
     $payment_method = $payment->getPaymentMethod();
     if ($payment_method === NULL) {
       throw new \InvalidArgumentException('The provided payment has no payment method referenced.');
     }
 
     /**
- * @var \Drupal\commerce_order\Entity\OrderInterface $order
-*/
+     * @var \Drupal\commerce_order\Entity\OrderInterface $order
+     */
     $order = $payment->getOrder();
 
-    // Request Payway.
+    // Make a request to PayWay.
     try {
       $this->payWayRestApiClient->doRequest($payment, $this->configuration);
       $result = json_decode($this->payWayRestApiClient->getResponse());
     }
-    catch (\Exception $e) {
+    catch (PayWayClientException $e) {
       $this->deletePayment($payment, $order);
-      \Drupal::logger('commerce_payway_frame')->warning($e->getMessage());
+      $this->logger->warning($e->getMessage());
       throw new HardDeclineException('The payment request failed.', 0, $e);
     }
 
     // If the payment is not approved.
     if ($result->status !== 'approved'
-        && $result->status !== 'approved*'
+      && $result->status !== 'approved*'
     ) {
       $this->deletePayment($payment, $order);
       $errorMessage = $result->responseCode . ': ' . $result->responseText;
-      \Drupal::logger('commerce_payway_net')->error($errorMessage);
+      $this->logger->error($errorMessage);
       throw new HardDeclineException('The provided payment method has been declined');
     }
 
     // Update the local payment entity.
-    $request_time = \Drupal::time()->getRequestTime();
+    $request_time = $this->time->getRequestTime();
     $payment->state = $capture ? 'capture_completed' : 'authorization';
     $payment->setRemoteId($result->transactionId);
     $payment->setAuthorizedTime($request_time);
@@ -226,11 +285,17 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \InvalidArgumentException
+   * @throws \Drupal\Core\Entity\EntityStorageException
    */
-  public function createPaymentMethod(PaymentMethodInterface $payment_method, array $payment_details) {
+  public function createPaymentMethod(
+    PaymentMethodInterface $payment_method,
+    array $payment_details
+  ) {
     $required_keys = [
-        // The expected keys are payment gateway specific and usually match
-        // a PaymentMethodAddForm form elements. They are expected to be valid.
+      // The expected keys are payment gateway specific and usually match
+      // a PaymentMethodAddForm form elements. They are expected to be valid.
       'payment_credit_card_token',
     ];
     foreach ($required_keys as $required_key) {
@@ -262,8 +327,12 @@ class PayWayFrame extends OnsitePaymentGatewayBase {
    *   The current order.
    *
    * @throws \Drupal\Core\Entity\EntityStorageException
+   * @throws \InvalidArgumentException
    */
-  public function deletePayment(PaymentInterface $payment, OrderInterface $order) {
+  public function deletePayment(
+    PaymentInterface $payment,
+    OrderInterface $order
+  ) {
     $payment->delete();
     $order->set('payment_method', NULL);
     $order->set('payment_gateway', NULL);

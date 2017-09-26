@@ -1,26 +1,57 @@
 <?php
 
-namespace Drupal\commerce_payway_frame\Client;
+namespace Drupal\commerce_payway\Client;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
+use Drupal\commerce_payway\Exception\PayWayClientException;
 use Drupal\Component\Uuid\UuidInterface;
-use GuzzleHttp\Client;
+use Drupal\Core\TypedData\Exception\MissingDataException;
 use GuzzleHttp\ClientInterface;
-use Psr\Http\Message\ResponseInterface;
+use GuzzleHttp\Exception\GuzzleException;
+use InvalidArgumentException;
 
 /**
- * Pay Way Rest Client Api.
+ * Class PayWayRestApiClient.
+ *
+ * @package Drupal\commerce_payway\Client
  */
 class PayWayRestApiClient implements PayWayRestApiClientInterface {
 
+  /**
+   * The REST API Client.
+   *
+   * @var \GuzzleHttp\ClientInterface
+   */
   private $client;
+
+  /**
+   * The UUID service.
+   *
+   * @var \Drupal\Component\Uuid\UuidInterface
+   */
   private $uuidService;
-  /* @var ResponseInterface */
+
+  /**
+   * The response from the REST API.
+   *
+   * @var \Psr\Http\Message\ResponseInterface
+   */
   private $response;
 
+  /**
+   * The default request method.
+   */
   const METHOD = 'POST';
+
+  /**
+   * The default currency.
+   */
   const CURRENCY = 'aud';
-  const TRANSACTION_TYPE_PAYEMENT = 'payment';
+
+  /**
+   * The request transaction type.
+   */
+  const TRANSACTION_TYPE_PAYMENT = 'payment';
 
   /**
    * PayWayRestApiClient constructor.
@@ -30,67 +61,65 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    * @param \Drupal\Component\Uuid\UuidInterface $uuid_service
    *   Uuid service.
    */
-  public function __construct(ClientInterface $client, UuidInterface $uuid_service) {
+  public function __construct(
+    ClientInterface $client,
+    UuidInterface $uuid_service
+  ) {
     $this->client = $client;
     $this->uuidService = $uuid_service;
   }
 
   /**
-   * Execute the payment request to payway.
-   *
-   * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
-   *   The payment.
-   * @param array $configuration
-   *   The payment method configuration.
-   *
-   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
-   * @throws \GuzzleHttp\Exception\GuzzleException
+   * {@inheritdoc}
    */
   public function doRequest(PaymentInterface $payment, array $configuration) {
     $payment_method = $payment->getPaymentMethod();
-    /**
-     * @var \Drupal\commerce_order\Entity\OrderInterface $order
-     */
+
+    /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
     $order = $payment->getOrder();
 
-    // Prepare the one-time payment.
-    $owner = $payment_method->getOwner();
-    if ($owner && !$owner->isAnonymous()) {
-      $customerNumber = $owner->get('uid')->first()->value;
-    }
-    else {
+    try {
+      // Prepare the one-time payment.
+      $owner = $payment_method->getOwner();
       $customerNumber = 'anonymous';
+      if ($owner && !$owner->isAnonymous()) {
+        $customerNumber = $owner->get('uid')->first()->value;
+      }
+
+      $this->response = $this->client->request(
+        static::METHOD, $configuration['api_url'], [
+          'form_params' => [
+            'singleUseTokenId' => $payment_method->getRemoteId(),
+            'customerNumber' => $customerNumber,
+            'transactionType' => static::TRANSACTION_TYPE_PAYMENT,
+            'principalAmount' => round($payment->getAmount()->getNumber(), 2),
+            'currency' => static::CURRENCY,
+            'orderNumber' => $order->id(),
+            'merchantId' => $configuration['merchant_id'],
+          ],
+          'headers' => [
+            'Authorization' => 'Basic ' . base64_encode($this->getSecretKey($configuration)),
+            'Idempotency-Key' => $this->uuidService->generate(),
+          ],
+        ]
+      );
     }
-
-    $this->response = $this->client->request(
-      PayWayRestApiClient::METHOD, $configuration['api_url'], [
-        'form_params' => [
-          'singleUseTokenId' => $payment_method->getRemoteId(),
-          'customerNumber' => $customerNumber,
-          'transactionType' => PayWayRestApiClient::TRANSACTION_TYPE_PAYEMENT,
-          'principalAmount' => round($payment->getAmount()->getNumber(), 2),
-          'currency' => PayWayRestApiClient::CURRENCY,
-          'orderNumber' => $order->id(),
-          'merchantId' => $configuration['merchant_id'],
-        ],
-        'headers' => [
-          'Authorization' => 'Basic ' . base64_encode($this->getSecretKey($configuration)),
-          'Idempotency-Key' => $this->uuidService->generate(),
-        ],
-      ]
-    );
-
+    catch (GuzzleException $e) {
+      throw new PayWayClientException('Request failed due to API.');
+    }
+    catch (InvalidArgumentException $e) {
+      throw new PayWayClientException('Request failed due to invalid user.');
+    }
+    catch (MissingDataException $e) {
+      throw new PayWayClientException('Request failed due to missing data.');
+    }
   }
 
   /**
-   * Get client response.
-   *
-   * @return string
-   *    Body of the client response.
+   * {@inheritdoc}
    */
   public function getResponse() {
-
-    if ($this->response !== null) {
+    if ($this->response !== NULL) {
       return $this->response->getBody();
     }
     return '';
@@ -101,6 +130,8 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
    *
    * @return string
    *   The secret key.
+   *
+   * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
   public function getSecretKey($configuration) {
     switch ($configuration['mode']) {
@@ -113,11 +144,9 @@ class PayWayRestApiClient implements PayWayRestApiClientInterface {
         break;
 
       default:
-        $secretKey = '';
-        drupal_set_message(t('The private key is empty'), 'error');
+        throw new MissingDataException('The private key is empty');
     }
     return $secretKey;
   }
-
 
 }

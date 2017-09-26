@@ -1,4 +1,4 @@
-name: Commerce PayWay Frame
+name: Commerce PayWay
 type: module
 description: 'Integrates PayWay Frame with Commerce Payment.'
 package: Commerce (contrib)

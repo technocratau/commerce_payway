@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_payway_frame\PluginForm\PayWayFrame;
+namespace Drupal\commerce_payway\PluginForm\PayWayFrame;
 
 use Drupal\commerce_payment\PluginForm\PaymentGatewayFormBase;
 use Drupal\commerce_payment\Exception\DeclineException;
@@ -29,11 +29,14 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    */
-  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
-    /**
- * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
-*/
+  public function buildConfigurationForm(
+    array $form,
+    FormStateInterface $form_state
+  ) {
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
 
     $plugin = $this->plugin;
@@ -41,7 +44,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     $form['#attached']['library'][] = 'commerce_payment/payment_method_form';
 
     // Set our key to settings array.
-    $form['#attached']['drupalSettings']['commercePayWayFrame'] = [
+    $form['#attached']['drupalSettings']['commercePayWayFrameForm'] = [
       'publishableKey' => $plugin->getPublishableKey(),
     ];
 
@@ -52,29 +55,31 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       '#payment_method_type' => $payment_method->bundle(),
     ];
 
-    $form['payment_details'] = $this->buildPayWayForm($form['payment_details'], $form_state);
+    $form['payment_details'] = $this->buildPayWayForm($form['payment_details'],
+      $form_state);
 
     /**
- * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
-*/
+     * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+     */
     $payment_method = $this->entity;
     /**
- * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
-*/
+     * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
+     */
     $billing_profile = Profile::create(
-        [
-          'type' => 'customer',
-          'uid' => $payment_method->getOwnerId(),
-        ]
+      [
+        'type' => 'customer',
+        'uid' => $payment_method->getOwnerId(),
+      ]
     );
     if ($order = $this->routeMatch->getParameter('commerce_order')) {
       $store = $order->getStore();
     }
     else {
       /**
- * @var \Drupal\commerce_store\StoreStorageInterface $store_storage
-*/
-      $store_storage = \Drupal::entityTypeManager()->getStorage('commerce_store');
+       * @var \Drupal\commerce_store\StoreStorageInterface $store_storage
+       */
+      $store_storage = \Drupal::entityTypeManager()
+        ->getStorage('commerce_store');
       $store = $store_storage->loadDefault();
     }
 
@@ -82,7 +87,8 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       '#parents' => array_merge($form['#parents'], ['billing_information']),
       '#type' => 'commerce_profile_select',
       '#default_value' => $billing_profile,
-      '#default_country' => $store ? $store->getAddress()->getCountryCode() : NULL,
+      '#default_country' => $store ? $store->getAddress()
+        ->getCountryCode() : NULL,
       '#available_countries' => $store ? $store->getBillingCountries() : [],
     ];
 
@@ -92,31 +98,39 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
   /**
    * {@inheritdoc}
    */
-  public function validateConfigurationForm(array &$form, FormStateInterface $form_state) {
+  public function validateConfigurationForm(
+    array &$form,
+    FormStateInterface $form_state
+  ) {
     // The JS library performs its own validation.
   }
 
   /**
    * {@inheritdoc}
+   *
    * @throws \Drupal\commerce_payment\Exception\DeclineException
    * @throws \Drupal\commerce_payment\Exception\PaymentGatewayException
    */
-  public function submitConfigurationForm(array &$form, FormStateInterface $form_state) {
-    $values = (array)$form_state->getValue($form['payment_details']['#parents']);
+  public function submitConfigurationForm(
+    array &$form,
+    FormStateInterface $form_state
+  ) {
+    $values = (array) $form_state->getValue($form['payment_details']['#parents']);
     $this->entity->payway_token = $values['payment_credit_card_token'];
-    // @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
+    /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
     $payment_method->setBillingProfile($form['billing_information']['#profile']);
 
-    $values = $form_state->getValue($form['#parents']);
+    $values =& $form_state->getValue($form['#parents']);
     /**
- * @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin
-*/
+     * @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin
+     */
     $payment_gateway_plugin = $this->plugin;
     // The payment method form is customer facing. For security reasons
     // the returned errors need to be more generic.
     try {
-      $payment_gateway_plugin->createPaymentMethod($payment_method, $values['payment_details']);
+      $payment_gateway_plugin->createPaymentMethod($payment_method,
+        $values['payment_details']);
     }
     catch (DeclineException $e) {
       \Drupal::logger('commerce_payment')->warning($e->getMessage());
@@ -141,7 +155,10 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * @return array
    *   Form element.
    */
-  public function buildPayWayForm(array $element, FormStateInterface $form_state) {
+  public function buildPayWayForm(
+    array $element,
+    FormStateInterface $form_state
+  ) {
 
     $element['payment_credit_card'] = [
       '#type' => 'markup',
@@ -159,7 +176,7 @@ HTML
       ];
     }
 
-    $element['#attached']['library'][] = 'commerce_payway_frame/form';
+    $element['#attached']['library'][] = 'commerce_payway/frame_form';
 
     return $element;
   }

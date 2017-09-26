@@ -8,7 +8,7 @@ payway:
   js:
     "https://api.payway.com.au/rest/v1/payway.js": { minified: false }
 
-form:
+frame_form:
   version: VERSION
   js:
     js/commerce_payway_frame.form.js: {}
@@ -17,4 +17,4 @@ form:
     - core/jquery
     - core/drupal
     - core/jquery.once
-    - commerce_payway_frame/payway
+    - commerce_payway/payway

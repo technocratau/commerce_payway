@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_payway_frame\Plugin\Commerce\PaymentMethodType;
+namespace Drupal\commerce_payway\Plugin\Commerce\PaymentMethodType;
 
 use Drupal\commerce\BundleFieldDefinition;
 use Drupal\commerce_payment\Entity\PaymentMethodInterface;

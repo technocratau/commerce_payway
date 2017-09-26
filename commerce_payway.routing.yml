@@ -1,0 +1,17 @@
+#commerce_payway.form:
+#  path: 'trusted-frame/html/{pluginId}'
+#  defaults:
+#    _controller: '\Drupal\commerce_payway\Controller\PageController::frameHtml'
+#  options:
+#    no_cache: TRUE
+#  requirements:
+#    _access: 'TRUE'
+
+#commerce_payway.process_payment:
+#  path: 'trusted-frame/process-payment'
+#  defaults:
+#    _controller: '\Drupal\commerce_payway\Controller\PageController::post'
+#  options:
+#    no_cache: TRUE
+#  requirements:
+#    _access: 'TRUE'

@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\commerce_payway_frame\Client;
+namespace Drupal\commerce_payway\Client;
 
 use Drupal\commerce_payment\Entity\PaymentInterface;
 
@@ -10,17 +10,22 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 interface PayWayRestApiClientInterface {
 
   /**
-   * Execute the request to do a payment with PayWay.
+   * Execute the payment request to payway.
    *
    * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
+   *   The payment.
    * @param array $configuration
+   *   The payment method configuration.
    *
-   * @return
+   * @throws \Drupal\commerce_payway\Exception\PayWayClientException
    */
   public function doRequest(PaymentInterface $payment, array $configuration);
 
   /**
-   * Get the response of the transaction.
+   * Get client response.
+   *
+   * @return string
+   *   Body of the client response.
    */
   public function getResponse();
 
