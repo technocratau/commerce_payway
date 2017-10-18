@@ -66,15 +66,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
      * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
      */
     $payment_method = $this->entity;
-    /**
-     * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
-     */
-    $billing_profile = Profile::create(
-      [
-        'type' => 'customer',
-        'uid' => $payment_method->getOwnerId(),
-      ]
-    );
+
     if ($order = $this->routeMatch->getParameter('commerce_order')) {
       $store = $order->getStore();
     }
@@ -83,6 +75,19 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       $store_storage = \Drupal::entityTypeManager()
         ->getStorage('commerce_store');
       $store = $store_storage->loadDefault();
+    }
+
+    /**
+     * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
+     */
+    $billing_profile = $order->getBillingProfile();
+    if ($billing_profile && empty($billing_profile->getOwnerId())) {
+      $billing_profile = Profile::create(
+        [
+          'type' => 'customer',
+          'uid' => $payment_method->getOwnerId(),
+        ]
+      );
     }
 
     $form['billing_information'] = [

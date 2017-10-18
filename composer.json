@@ -1,10 +1,7 @@
 {
-  "name": "drupal/commerce_payway_frame",
+  "name": "drupal/commerce_payway",
   "type": "drupal-module",
   "description": "Provides Commerce integration for PayWay Payments.",
-  "homepage": "http://drupal.org/project/commerce_payway_frame",
-  "license": "GPL-2.0+",
-  "require": {
-      "rotassator/omnipay-payway-restapi": "^1.5"
-  }
+  "homepage": "http://drupal.org/project/commerce_payway",
+  "license": "GPL-2.0+"
 }
