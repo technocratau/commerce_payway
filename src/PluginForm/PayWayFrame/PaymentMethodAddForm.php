@@ -81,7 +81,8 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
      * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
      */
     $billing_profile = $order->getBillingProfile();
-    if ($billing_profile && empty($billing_profile->getOwnerId())) {
+    if ($billing_profile === null ||
+      ($billing_profile && empty($billing_profile->getOwnerId()))) {
       $billing_profile = Profile::create(
         [
           'type' => 'customer',
