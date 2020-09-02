@@ -1,19 +1,17 @@
 <?php
 
-namespace Drupal\commerce_payway\PluginForm\PayWayFrame;
+namespace Drupal\commerce_payway\PluginForm\Payway;
 
-use Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface;
-use Drupal\commerce_payment\PluginForm\PaymentGatewayFormBase;
 use Drupal\commerce_payment\Exception\DeclineException;
 use Drupal\commerce_payment\Exception\PaymentGatewayException;
-use Drupal\commerce_payway\Plugin\Commerce\PaymentGateway\PayWayFrame;
+use Drupal\commerce_payment\PluginForm\PaymentMethodOffsiteAddForm;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\profile\Entity\Profile;
 
 /**
  * Payment Method Add form.
  */
-class PaymentMethodAddForm extends PaymentGatewayFormBase {
+class StoredPaymentMethodAddForm extends PaymentMethodOffsiteAddForm {
 
   /**
    * The route match.
@@ -35,20 +33,17 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    * @throws \Drupal\Core\TypedData\Exception\MissingDataException
    */
-  public function buildConfigurationForm(
-    array $form,
-    FormStateInterface $form_state
-  ) {
+  public function buildConfigurationForm(array $form, FormStateInterface $form_state) {
     /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
 
-    /** @var PayWayFrame $plugin */
+    /* @var \Drupal\commerce_payway\Plugin\Commerce\PaymentGateway\PaywayFrame $plugin */
     $plugin = $this->plugin;
 
     $form['#attached']['library'][] = 'commerce_payment/payment_method_form';
 
     // Set our key to settings array.
-    $form['#attached']['drupalSettings']['commercePayWayFrameForm'] = [
+    $form['#attached']['drupalSettings']['commercePaywayStoredForm'] = [
       'publishableKey' => $plugin->getPublishableKey(),
     ];
 
@@ -59,16 +54,18 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       '#payment_method_type' => $payment_method->bundle(),
     ];
 
-    $form['payment_details'] = $this->buildPayWayForm($form['payment_details'],
+    // We need a single use token ID set.
+    $input = $form_state->getUserInput();
+    $input['singleUseTokenId'] = '';
+    $form_state->setUserInput($input);
+
+    $form['payment_details'] = $this->buildPaywayForm($form['payment_details'],
       $form_state);
 
-    /**
-     * @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method
-     */
-    $payment_method = $this->entity;
+    $order = $this->routeMatch->getParameter('commerce_order');
 
-    if ($order = $this->routeMatch->getParameter('commerce_order')) {
-      $store = $order->getStore();
+    if ($order) {
+    $store = $order->getStore();
     }
     else {
       /** @var \Drupal\commerce_store\StoreStorageInterface $store_storage */
@@ -80,8 +77,8 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     /**
      * @var \Drupal\profile\Entity\ProfileInterface $billing_profile
      */
-    $billing_profile = $order->getBillingProfile();
-    if ($billing_profile === null ||
+    $billing_profile = $order ? $order->getBillingProfile() : NULL;
+    if ($billing_profile === NULL ||
       ($billing_profile && empty($billing_profile->getOwnerId()))) {
       $billing_profile = Profile::create(
         [
@@ -100,6 +97,25 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
       '#available_countries' => $store ? $store->getBillingCountries() : [],
     ];
 
+    if ($order) {
+      $form['reusable'] = [
+        '#type' => 'value',
+        '#value' => $payment_method->isReusable(),
+      ];
+      if (!empty($form['#allow_reusable'])) {
+        if ($form['#always_save']) {
+          $form['reusable']['#value'] = TRUE;
+        }
+        else {
+          $form['reusable'] = [
+            '#type' => 'checkbox',
+            '#title' => t('Save this payment method for later use'),
+            '#default_value' => FALSE,
+          ];
+        }
+      }
+    }
+
     return $form;
   }
 
@@ -110,7 +126,15 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     array &$form,
     FormStateInterface $form_state
   ) {
-    // The JS library performs its own validation.
+    if (!$form_state->isSubmitted()) {
+      return;
+    }
+
+    // @TODO Use Postman or such like to test this. And unit tests.
+    $input = $form_state->getUserInput();
+    if (empty($input['singleUseTokenId'])) {
+      $form_state->setErrorByName('add-payment-method','You need to provide valid payment information');
+    }
   }
 
   /**
@@ -123,30 +147,38 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
     array &$form,
     FormStateInterface $form_state
   ) {
-    $values = (array) $form_state->getValue($form['payment_details']['#parents']);
-    $this->entity->payway_token = $values['payment_credit_card_token'];
-
     /** @var \Drupal\commerce_payment\Entity\PaymentMethodInterface $payment_method */
     $payment_method = $this->entity;
-    $payment_method->setBillingProfile($form['billing_information']['#profile']);
+    $token = $form_state->getUserInput()['singleUseTokenId'];
 
-    $values =& $form_state->getValue($form['#parents']);
-    /** @var SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
+    if (array_key_exists('billing_information', $form)) {
+      $payment_method->setBillingProfile($form['billing_information']['#profile']);
+    }
+
+    /* @var \Drupal\commerce_payment\Plugin\Commerce\PaymentGateway\SupportsStoredPaymentMethodsInterface $payment_gateway_plugin */
     $payment_gateway_plugin = $this->plugin;
     // The payment method form is customer facing. For security reasons
     // the returned errors need to be more generic.
     try {
-      $payment_gateway_plugin->createPaymentMethod($payment_method,
-        $values['payment_details']);
+      $user = \Drupal::routeMatch()->getParameter('user');
+
+      if ($form_state->getUserInput()['payment_information']['add_payment_method']['reusable'] &&
+        !$payment_method->isReusable()) {
+        $user = \Drupal::currentUser();
+      }
+      $payment_gateway_plugin->createPaymentMethod($payment_method, [
+        'customer' => $user,
+        'payment_credit_card_token' => $token]
+      );
     }
     catch (DeclineException $e) {
       \Drupal::logger('commerce_payment')->warning($e->getMessage());
-      throw new DeclineException('We encountered an error processing your 
+      throw new DeclineException('We encountered an error processing your
               payment method. Please verify your details and try again.');
     }
     catch (PaymentGatewayException $e) {
       \Drupal::logger('commerce_payment')->error($e->getMessage());
-      throw new PaymentGatewayException('We encountered an unexpected 
+      throw new PaymentGatewayException('We encountered an unexpected
               error processing your payment method. Please try again later.');
     }
   }
@@ -162,10 +194,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
    * @return array
    *   Form element.
    */
-  public function buildPayWayForm(
-    array $element,
-    FormStateInterface $form_state
-  ) {
+  public function buildPaywayForm(array $element, FormStateInterface $form_state) {
 
     $element['payment_credit_card'] = [
       '#type' => 'markup',
@@ -174,7 +203,7 @@ class PaymentMethodAddForm extends PaymentGatewayFormBase {
 HTML
     ];
 
-    $inputValues =& $form_state->getUserInput();
+    $inputValues = &$form_state->getUserInput();
 
     if (!empty($inputValues['singleUseTokenId'])) {
       $element['payment_credit_card_token'] = [

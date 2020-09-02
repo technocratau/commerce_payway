@@ -1,6 +1,6 @@
-name: Commerce PayWay
+name: Commerce Payway
 type: module
-description: 'Integrates PayWay Frame with Commerce Payment.'
+description: 'Commerce Payway module.'
 package: Commerce (contrib)
 core: 8.x
 dependencies:

@@ -1,4 +1,4 @@
-commerce_payment.commerce_payment_gateway.plugin.payway_frame:
+commerce_payment.commerce_payment_gateway.plugin.payway_api_frame:
   type: commerce_payment_gateway_configuration
   mapping:
     secret_key_test:

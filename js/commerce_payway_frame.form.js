@@ -1,6 +1,6 @@
 /**
  * @file
- * Javascript to generate PayWay Frame token in PCI-compliant way.
+ * Javascript to generate Payway Frame token in PCI-compliant way.
  */
 
 (function ($, Drupal, drupalSettings) {
@@ -10,16 +10,16 @@
   var frameInstance = null;
 
   /**
-   * Attaches the commercePayWayFrameForm behavior.
+   * Attaches the commercePaywayForm behavior.
    *
    * @type {Drupal~behavior}
    *
-   * @see Drupal.commercePayWayFrameForm
+   * @see Drupal.commercePaywayForm
    */
-  Drupal.behaviors.commercePayWayFrameForm = {
+  Drupal.behaviors.commercePaywayApiFrameForm = {
 
     attach: function (context) {
-      $(context).find('#payway-credit-card').once('commercePayWayFrameForm').each(
+      $(context).find('#payway-credit-card').once('commercePaywayApiFrameForm').each(
         function () {
           if (frameInstance !== null) {
             frameInstance.destroy();
@@ -27,7 +27,7 @@
 
           payway.createCreditCardFrame(
             {
-              publishableApiKey: drupalSettings.commercePayWayFrameForm.publishableKey
+              publishableApiKey: drupalSettings.commercePaywayStoredForm.publishableKey
             }, function (err, frame) {
               frameInstance = frame;
             }

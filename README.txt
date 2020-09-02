@@ -1,4 +1,4 @@
-README file for Commerce PayWay Frame
+README file for Commerce Payway Frame
 
 CONTENTS OF THIS FILE
 ---------------------
@@ -12,7 +12,7 @@ CONTENTS OF THIS FILE
 
 INTRODUCTION
 ------------
-This project integrates PayWay Trusted Frame online payments into
+This project integrates Payway Trusted Frame online payments into
 the Drupal Commerce payment and checkout systems.
 https://www.payway.com.au/docs/rest.html
 * For a full description of the module, visit the project page:

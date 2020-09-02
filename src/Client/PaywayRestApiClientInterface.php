@@ -7,19 +7,15 @@ use Drupal\commerce_payment\Entity\PaymentInterface;
 /**
  * Pay Way Client interface.
  */
-interface PayWayRestApiClientInterface {
+interface PaywayRestApiClientInterface {
 
   /**
    * Execute the payment request to payway.
    *
    * @param \Drupal\commerce_payment\Entity\PaymentInterface $payment
    *   The payment.
-   * @param array $configuration
-   *   The payment method configuration.
-   *
-   * @throws \Drupal\commerce_payway\Exception\PayWayClientException
    */
-  public function doRequest(PaymentInterface $payment, array $configuration);
+  public function doRequest(PaymentInterface $payment);
 
   /**
    * Get client response.
@@ -28,5 +24,13 @@ interface PayWayRestApiClientInterface {
    *   Body of the client response.
    */
   public function getResponse();
+
+  /**
+   * Set configuration.
+   *
+   * @param array
+   *   The configuration array.
+   */
+  public function setConfiguration(array $configuration);
 
 }
